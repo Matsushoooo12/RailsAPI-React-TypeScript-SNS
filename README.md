@@ -1,13 +1,13 @@
 # Rails API + React(TypeScript)で簡易的な SNS アプリ を作る
 
-- 作業用ディレクトリ作成
+## 作業用ディレクトリ作成
 
 ```
 $ mkdir rails-react-sns
 $ cd rails-react-sns
 ```
 
-- Rails プロジェクト作成
+## Rails プロジェクト作成
 
 ```
 $ rails new api --api
@@ -15,14 +15,14 @@ $ cd api
 $ rm -rf .git
 ```
 
-- React プロジェクト作成
+## React プロジェクト作成
 
 ```
 $ cd rails-react-sns
 $ npx create-react-app frontend --template typescript
 ```
 
-- HTTP 通信設定
+## HTTP 通信設定
 
 ```
 $ cd api
@@ -53,7 +53,7 @@ Rails.application.config.middleware.insert_before 0, Rack::Cors do
 end
 ```
 
-- ポート番号変更
+## ポート番号変更
 
 app/config/puma.rb
 
@@ -62,14 +62,14 @@ app/config/puma.rb
 port ENV.fetch("PORT") { 3001 }
 ```
 
-- Post モデル作成
+## Post モデル作成
 
 ```
 $ rails g model Post content:text
 $ rails db:migrate
 ```
 
-- posts コントローラー作成
+## posts コントローラー作成
 
 ```
 $ rails g controller api/v1/posts
@@ -120,7 +120,7 @@ class Api::V1::PostsController < ApplicationController
 end
 ```
 
-- posts ルーティング設定
+## posts ルーティング設定
 
 config/routes.rb
 
@@ -134,9 +134,9 @@ Rails.application.routes.draw do
 end
 ```
 
-- API 動作確認
+## API 動作確認
 
-- npm パッケージのインストール
+## npm パッケージのインストール
 
 ```
 $ cd frontend
@@ -146,7 +146,7 @@ $ cd frontend
 $ npm i axios axios-case-converter @types/axios react-router-dom@5.2.0 @types/react-router-dom
 ```
 
-- chakra-ui をインストール
+## chakra-ui をインストール
 
 ```
 $ npm i @chakra-ui/react @emotion/react@^11 @emotion/styled@^11 framer-motion@^5
@@ -169,7 +169,7 @@ export type Post = {
 };
 ```
 
-- API Client を作成
+## API Client を作成
 
 ```
 $ mkdir src/api
@@ -224,7 +224,7 @@ export const deletePost = (id: number) => {
 };
 ```
 
-- 全体の UI を設定
+## 全体の UI を設定
 
 ```
 $ mkdir src/theme
@@ -250,7 +250,7 @@ const theme = extendTheme({
 export default theme;
 ```
 
-- ChakraProvider 設定
+## ChakraProvider 設定
 
 src/App.tsx
 
@@ -273,7 +273,7 @@ function App() {
 export default App;
 ```
 
-- Header 作成
+## Header 作成
 
 ```
 $ mkdir src/components/layout
@@ -330,7 +330,7 @@ export const Header: VFC = memo(() => {
 });
 ```
 
-- HeaderLayout 作成
+## HeaderLayout 作成
 
 ```
 $ mkdir src/components/templates
@@ -358,7 +358,7 @@ export const HeaderLayout: VFC<Props> = memo((props) => {
 });
 ```
 
-- post/Home ページ作成
+## post/Home ページ作成
 
 ```
 $ mkdir src/components/pages/post
@@ -458,7 +458,7 @@ function App() {
 export default App;
 ```
 
-- post/Detail ページ作成
+## post/Detail ページ作成
 
 ```
 $ touch src/components/pages/post/Detail.tsx
@@ -586,7 +586,7 @@ function App() {
 export default App;
 ```
 
-- post/New ページ作成
+## post/New ページ作成
 
 ```
 $ touch src/components/pages/post/New.tsx
@@ -703,7 +703,7 @@ function App() {
 export default App;
 ```
 
-- post/Edit ページ作成
+## post/Edit ページ作成
 
 ```
 $ touch src/components/pages/post/Edit.tsx
