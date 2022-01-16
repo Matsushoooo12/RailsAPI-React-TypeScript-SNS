@@ -2,22 +2,26 @@ import { Box, Heading, Input, Center, Button, Stack } from "@chakra-ui/react";
 import React, { memo, useState, VFC } from "react";
 import { useHistory } from "react-router-dom";
 import { createPost } from "../../../api/post";
-import { Post } from "../../../types/post";
 
 export const New: VFC = memo(() => {
-  const [content, setContent] = useState<string>("");
+  const [value, setValue] = useState({
+    id: 0,
+    content: "",
+  });
 
   const history = useHistory();
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue({
+      ...value,
+      [e.target.name]: e.target.value,
+    });
+  };
+
   const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-
-    const data: Post = {
-      id: 0,
-      content: content,
-    };
     try {
-      const res = await createPost(data);
+      const res = await createPost(value);
       console.log(res.data);
       history.push("/");
     } catch (e) {
@@ -43,11 +47,10 @@ export const New: VFC = memo(() => {
             </Heading>
             <Input
               placeholder="content"
-              value={content}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                setContent(e.target.value);
-              }}
+              value={value.content}
+              onChange={(e) => handleChange(e)}
               type="text"
+              name="content"
             />
             <Button
               bg="teal"
