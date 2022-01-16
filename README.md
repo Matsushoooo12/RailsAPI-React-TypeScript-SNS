@@ -2417,3 +2417,388 @@ export const Header: VFC = memo(() => {
   );
 });
 ```
+
+# 投稿にユーザーを表示する
+
+# posts コントローラー修正
+
+```
+$ cd api
+```
+
+app/controllers/api/v1/posts_controller.rb
+
+```
+class Api::V1::PostsController < ApplicationController
+    before_action :authenticate_api_v1_user!, only: [:create, :update, :destroy]
+    def index
+        posts = Post.all.order(created_at: :desc)
+        posts_array = posts.map do |post|
+            {
+                id: post.id,
+                content: post.content,
+                user: User.find_by(id: post.user_id)
+            }
+        end
+        render json: posts_array
+    end
+
+    def show
+        post = Post.find(params[:id])
+        post_list = {
+            id: post.id,
+            content: post.content,
+            user: post.user
+        }
+        render json: post_list
+    end
+
+    def create
+        post = Post.new(post_params)
+        if post.save
+            render json: post
+        else
+            render json: post.errors, status: 422
+        end
+    end
+
+    def update
+        post = Post.find(params[:id])
+        if current_api_v1_user.id == post.user_id
+            if post.update(post_params)
+                render json: post
+            else
+                render json: post.errors, status: 422
+            end
+        else
+            render json: {message: 'can not update data'}, status: 422
+        end
+    end
+
+    def destroy
+        post = Post.find(params[:id])
+        if current_api_v1_user.id == post.user_id
+            post.destroy
+            render json: post
+        else
+            render json: {message: 'can not delete data'}, status: 422
+        end
+    end
+
+    private
+    def post_params
+        params.require(:post).permit(:content).merge(user_id: current_api_v1_user.id)
+    end
+end
+```
+
+## post の型付けを修正
+
+src/types/post.ts
+
+```
+export type Post = {
+  id: number;
+  content: string;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+  };
+};
+```
+
+## post API 設定修正
+
+src/api/post.ts
+
+```
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
+import Cookies from "js-cookie";
+import { Post } from "../types/post";
+import client from "./client";
+
+export const getAllPosts = () => {
+  return client.get("/posts");
+};
+
+export const getDetailPost = (id: number) => {
+  return client.get(`/posts/${id}`);
+};
+
+// 修正
+export const createPost = (params: Pick<Post, "content">) => {
+  return client.post("/posts", params, {
+    headers: <any>{
+      "access-token": Cookies.get("_access_token"),
+      client: Cookies.get("_client"),
+      uid: Cookies.get("_uid"),
+    },
+  });
+};
+
+export const updatePost = (id: number, params: Post) => {
+  return client.patch(`/posts/${id}`, params, {
+    headers: <any>{
+      "access-token": Cookies.get("_access_token"),
+      client: Cookies.get("_client"),
+      uid: Cookies.get("_uid"),
+    },
+  });
+};
+
+export const deletePost = (id: number) => {
+  return client.delete(`/posts/${id}`, {
+    headers: <any>{
+      "access-token": Cookies.get("_access_token"),
+      client: Cookies.get("_client"),
+      uid: Cookies.get("_uid"),
+    },
+  });
+};
+```
+
+## それぞれのコンポーネントを修正
+
+src/components/pages/post/Home.tsx
+
+```
+import { Box, Center, Text, Heading, Wrap, WrapItem } from "@chakra-ui/react";
+import { VFC, memo, useState, useEffect, useCallback } from "react";
+import { useHistory } from "react-router-dom";
+import { getAllPosts } from "../../../api/post";
+import { Post } from "../../../types/post";
+
+export const Home: VFC = memo(() => {
+  const [posts, setPosts] = useState<Post[]>([]);
+
+  const history = useHistory();
+
+  const onClickDetailPost = useCallback(
+    (id) => {
+      history.push(`/post/${id}`);
+    },
+    [history]
+  );
+
+  const handleGetAllPosts = async () => {
+    try {
+      const res = await getAllPosts();
+      console.log(res.data);
+      setPosts(res.data);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  useEffect(() => {
+    handleGetAllPosts();
+  }, []);
+  return (
+    <Box p="40px">
+      <Heading as="h1" textAlign="center" mb="16px">
+        投稿一覧ページ
+      </Heading>
+      <Wrap>
+        {posts.map((post) => (
+          <WrapItem key={post.id}>
+            <Center
+              onClick={() => onClickDetailPost(post.id)}
+              width="240px"
+              height="240px"
+              bg="white"
+              borderRadius="md"
+              shadow="md"
+              cursor="pointer"
+            >
+              <Box textAlign="center">
+                <Text>{post.content}</Text>
+                // 追加
+                <Text>{post.user.name}</Text>
+                // 追加
+                <Text>{post.user.email}</Text>
+              </Box>
+            </Center>
+          </WrapItem>
+        ))}
+      </Wrap>
+    </Box>
+  );
+});
+```
+
+src/components/pages/post/Detail.tsx
+
+```
+import { Button, Box, Heading, Text, Center, Stack } from "@chakra-ui/react";
+import { memo, useEffect, useState, VFC } from "react";
+import { useHistory, useParams } from "react-router-dom";
+import { deletePost, getDetailPost } from "../../../api/post";
+import { Post } from "../../../types/post";
+
+export const Detail: VFC = memo(() => {
+  const [value, setValue] = useState({
+    id: 0,
+    content: "",
+    // 追加
+    user: {
+      id: 0,
+      name: "",
+      email: "",
+    },
+  });
+
+  const query = useParams();
+  const history = useHistory();
+
+  const onClickEditPost = (id: number) => {
+    history.push(`/edit/${id}`);
+  };
+
+  const handleGetDetailPost = async (query: any) => {
+    try {
+      const res = await getDetailPost(query.id);
+      console.log(res.data);
+      setValue({
+        id: res.data.id,
+        content: res.data.content,
+        // 追加
+        user: {
+          id: res.data.user.id,
+          name: res.data.user.name,
+          email: res.data.user.email,
+        },
+      });
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  const handleDeletePost = async (item: Post) => {
+    console.log("click", item.id);
+    try {
+      const res = await deletePost(item.id);
+      console.log(res.data);
+      history.push("/");
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  useEffect(() => {
+    handleGetDetailPost(query);
+  }, [query]);
+  return (
+    <Box width="100%" height="100%" p="40px">
+      <Heading as="h1" textAlign="center" mb={4}>
+        投稿詳細
+      </Heading>
+      <Center
+        width="240px"
+        height="240px"
+        bg="white"
+        mx="auto"
+        borderRadius="md"
+        shadow="md"
+        p="16px"
+      >
+        <Stack width="100%">
+          <Text textAlign="center">{value?.content}</Text>
+          // 追加
+          <Text textAlign="center">{value?.user.name}</Text>
+          // 追加
+          <Text textAlign="center">{value?.user.email}</Text>
+          <Button
+            bg="teal"
+            color="white"
+            onClick={() => onClickEditPost(value?.id)}
+          >
+            編集
+          </Button>
+          <Button
+            bg="teal"
+            color="white"
+            onClick={() => handleDeletePost(value)}
+          >
+            削除
+          </Button>
+        </Stack>
+      </Center>
+    </Box>
+  );
+});
+```
+
+src/components/pages/post/New.tsx
+
+```
+import { Box, Heading, Input, Center, Button, Stack } from "@chakra-ui/react";
+import React, { memo, useState, VFC } from "react";
+import { useHistory } from "react-router-dom";
+import { createPost } from "../../../api/post";
+
+export const New: VFC = memo(() => {
+  const [value, setValue] = useState({
+    content: "",
+  });
+
+  const history = useHistory();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue({
+      ...value,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    try {
+      const res = await createPost(value);
+      console.log(res.data);
+      history.push("/");
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  return (
+    <Box width="100%" height="100%" p="40px">
+      <Center
+        width="240px"
+        height="240px"
+        p="16px"
+        bg="white"
+        mx="auto"
+        borderRadius="md"
+        shadow="md"
+        textAlign="center"
+      >
+        <form>
+          <Stack spacing={4}>
+            <Heading as="h1" textAlign="center" mb="16px" fontSize="24px">
+              新規作成
+            </Heading>
+            <Input
+              placeholder="content"
+              value={value.content}
+              onChange={(e) => handleChange(e)}
+              type="text"
+              name="content"
+            />
+            <Button
+              bg="teal"
+              color="white"
+              type="submit"
+              onClick={(e) => handleSubmit(e)}
+            >
+              投稿
+            </Button>
+          </Stack>
+        </form>
+      </Center>
+    </Box>
+  );
+});
+```
+
+# いいね機能作成

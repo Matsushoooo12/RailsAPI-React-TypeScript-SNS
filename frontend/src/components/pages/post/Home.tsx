@@ -39,14 +39,20 @@ export const Home: VFC = memo(() => {
           <WrapItem key={post.id}>
             <Center
               onClick={() => onClickDetailPost(post.id)}
-              width="180px"
-              height="180px"
+              width="240px"
+              height="240px"
               bg="white"
               borderRadius="md"
               shadow="md"
               cursor="pointer"
             >
-              <Text>{post.content}</Text>
+              <Box textAlign="center">
+                <Text color="teal" fontWeight="bold" fontSize="24px">
+                  {post.content}
+                </Text>
+                <Text>{post.user.name}</Text>
+                <Text>{post.user.email}</Text>
+              </Box>
             </Center>
           </WrapItem>
         ))}

@@ -5,7 +5,6 @@ import { createPost } from "../../../api/post";
 
 export const New: VFC = memo(() => {
   const [value, setValue] = useState({
-    id: 0,
     content: "",
   });
 

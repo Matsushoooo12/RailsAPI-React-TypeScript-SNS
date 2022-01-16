@@ -40,7 +40,14 @@ export const Profile: VFC = () => {
         p="16px"
       >
         <Stack width="100%">
-          <Text textAlign="center">{user?.name}</Text>
+          <Text
+            textAlign="center"
+            color="teal"
+            fontWeight="bold"
+            fontSize="24px"
+          >
+            {user?.name}
+          </Text>
           <Text textAlign="center">{user?.email}</Text>
         </Stack>
       </Center>
