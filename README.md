@@ -154,7 +154,7 @@ $ npm i axios axios-case-converter @types/axios react-router-dom@5.2.0 @types/re
 $ npm i @chakra-ui/react @emotion/react@^11 @emotion/styled@^11 framer-motion@^5
 ```
 
-- Post の型付け
+## Post の型付け
 
 ```
 $ mkdir src/types
@@ -1014,4 +1014,658 @@ DELETE `http://localhost:3001/api/v1/auth/sign_out`
     "access-token": "O6naQEOPRlt558FI9oEKXA",
     "client": "ZstUQu3TGkXzCZ4JAsBAGw"
 }
+```
+
+## ログイン機能のための npm パッケージをインストール
+
+```
+$ cd frontend
+$ npm i js-cookie @types/js-cookie
+```
+
+## Post の型付け
+
+```
+$ touch src/types/user.ts
+```
+
+src/types/user.ts
+
+```
+export type User = {
+  id: number;
+  email: string;
+  password: string;
+  passwordConfirmation: string;
+};
+```
+
+## ログイン用の API 通信関数を定義
+
+```
+$ touch src/api/auth.ts
+```
+
+src/api/auth.ts
+
+```
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
+import Cookies from "js-cookie";
+import { User } from "../types/user";
+import client from "./client";
+
+// サインアップ
+export const signUp = (params: User) => {
+  return client.post("/auth", params);
+};
+
+// サインイン
+export const signIn = (params: Omit<User, "passwordConfirmation">) => {
+  return client.post("/auth/sign_in", params);
+};
+
+// サインアウト
+export const signOut = () => {
+  return client.delete("/auth/sign_out", {
+    headers: <any>{
+      "access-token": Cookies.get("_access_token"),
+      client: Cookies.get("_client"),
+      uid: Cookies.get("_uid"),
+    },
+  });
+};
+
+// ログインユーザーの取得
+export const getCurrentUser = () => {
+  if (
+    !Cookies.get("_access_token") ||
+    !Cookies.get("_client") ||
+    !Cookies.get("_uid")
+  )
+    return;
+
+  return client.get("/auth/sessions", {
+    headers: <any>{
+      "access-token": Cookies.get("_access_token"),
+      client: Cookies.get("_client"),
+      uid: Cookies.get("_uid"),
+    },
+  });
+};
+```
+
+## サインアップコンポーネントとサインインコンポーネントを作成
+
+```
+$ mkdir src/components/pages/auth
+$ touch src/components/pages/auth/SignUp.jsx
+$ touch src/components/pages/auth/SignIn.jsx
+```
+
+src/components/pages/auth/SignUp.jsx
+
+```
+import { memo, VFC } from "react";
+
+export const SignUp: VFC = memo(() => {
+  return <div>サインアップページです</div>;
+});
+```
+
+src/components/pages/auth/SignIn.jsx
+
+```
+import { memo, VFC } from "react";
+
+export const SignIn: VFC = memo(() => {
+  return <div>サインインページです</div>;
+});
+```
+
+## App.jsx でログイン状態によってコンテンツを切り分ける
+
+src/App.tsx
+
+```
+import { ChakraProvider } from "@chakra-ui/react";
+import { createContext, useEffect, useState } from "react";
+import { BrowserRouter, Redirect, Route, Switch } from "react-router-dom";
+import { getCurrentUser } from "./api/auth";
+import { SignIn } from "./components/pages/auth/SignIn";
+import { SignUp } from "./components/pages/auth/SignUp";
+
+import { Detail } from "./components/pages/post/Detail";
+import { Edit } from "./components/pages/post/Edit";
+import { Home } from "./components/pages/post/Home";
+import { New } from "./components/pages/post/New";
+import { HeaderLayout } from "./components/templates/HeaderLayout";
+import theme from "./theme/theme";
+import { User } from "./types/user";
+
+export const AuthContext = createContext({});
+
+function App() {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isSignedIn, setIsSignedIn] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<User>();
+
+  const handleGetCurrentUser = async () => {
+    try {
+      const res = await getCurrentUser();
+
+      if (res?.data.isLogin === true) {
+        setIsSignedIn(true);
+        setCurrentUser(res?.data.data);
+        console.log(res.data.data);
+      } else {
+        console.log("no current user");
+      }
+    } catch (e) {
+      console.log(e);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    handleGetCurrentUser();
+  }, [setCurrentUser]);
+
+  const Private = ({ children }: any) => {
+    if (!loading) {
+      if (isSignedIn) {
+        return children;
+      } else {
+        return <Redirect to="/signin" />;
+      }
+    } else {
+      return <></>;
+    }
+  };
+
+  return (
+    <ChakraProvider theme={theme}>
+      <AuthContext.Provider
+        value={{
+          loading,
+          setLoading,
+          isSignedIn,
+          setIsSignedIn,
+          currentUser,
+          setCurrentUser,
+        }}
+      >
+        <BrowserRouter>
+          <Switch>
+            <HeaderLayout>
+              <Route exact path="/signup">
+                <SignUp />
+              </Route>
+              <Route exact path="/signin">
+                <SignIn />
+              </Route>
+              <Private>
+                <Route exact path="/">
+                  <Home />
+                </Route>
+                <Route exact path="/new">
+                  <New />
+                </Route>
+                <Route path="/post/:id">
+                  <Detail />
+                </Route>
+                <Route path="/edit/:id">
+                  <Edit />
+                </Route>
+              </Private>
+            </HeaderLayout>
+          </Switch>
+        </BrowserRouter>
+      </AuthContext.Provider>
+    </ChakraProvider>
+  );
+}
+
+export default App;
+```
+
+## ログイン状態とログアウト状態でのヘッダーを切り分ける
+
+src/components/layout/Header.tsx
+
+```
+import { Flex, Heading, Link, Box } from "@chakra-ui/react";
+import { VFC, memo, useCallback, useContext, ContextType } from "react";
+import { useHistory } from "react-router-dom";
+import { AuthContext } from "../../App";
+
+export const Header: VFC = memo(() => {
+  const history = useHistory();
+
+  const onClickHome = useCallback(() => history.push("/"), [history]);
+  const onClickNewPost = useCallback(() => {
+    history.push("/new");
+  }, [history]);
+  const onClickSignUp = useCallback(() => {
+    history.push("/signup");
+  }, [history]);
+  const onClickSignIn = useCallback(() => {
+    history.push("/signin");
+  }, [history]);
+
+  // ログイン状態によってメニュー切り替え
+  const { loading, isSignedIn } = useContext<any>(AuthContext);
+
+  const AuthButtons = () => {
+    if (!loading) {
+      if (isSignedIn) {
+        return (
+          <Flex align="center" fontSize="sm">
+            <Box mr="24px">
+              <Link onClick={onClickNewPost}>新規投稿</Link>
+            </Box>
+            <Box mr="24px">
+              <Link>DM</Link>
+            </Box>
+            <Box mr="24px">
+              <Link>プロフィール</Link>
+            </Box>
+            <Box>
+              <Link>ログアウト</Link>
+            </Box>
+          </Flex>
+        );
+      } else {
+        return (
+          <Flex align="center" fontSize="sm">
+            <Box mr="24px">
+              <Link onClick={onClickSignUp}>サインアップ</Link>
+            </Box>
+            <Box>
+              <Link onClick={onClickSignIn}>サインイン</Link>
+            </Box>
+          </Flex>
+        );
+      }
+    } else {
+      return <></>;
+    }
+  };
+  return (
+    <>
+      <Flex
+        as="nav"
+        bg="teal.500"
+        color="gray.50"
+        align="center"
+        justify="space-between"
+        padding={5}
+      >
+        <Flex
+          align="center"
+          as="a"
+          mr={8}
+          _hover={{ cursor: "pointer" }}
+          onClick={onClickHome}
+        >
+          <Heading as="h1" fontSize="lg">
+            SNS APP
+          </Heading>
+        </Flex>
+        <AuthButtons />
+      </Flex>
+    </>
+  );
+});
+```
+
+## サインアップページ作成
+
+src/components/pages/auth/SignUp.tsx
+
+```
+import Cookies from "js-cookie";
+import { Box, Heading, Input, Center, Button, Stack } from "@chakra-ui/react";
+import React, { memo, useContext, useState, VFC } from "react";
+import { useHistory } from "react-router-dom";
+import { signUp } from "../../../api/auth";
+import { AuthContext } from "../../../App";
+
+export const SignUp: VFC = memo(() => {
+  const history = useHistory();
+  const { setIsSignedIn, setCurrentUser } = useContext<any>(AuthContext);
+
+  const [value, setValue] = useState({
+    id: 0,
+    email: "",
+    password: "",
+    passwordConfirmation: "",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue({
+      ...value,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    try {
+      const res = await signUp(value);
+      console.log(res);
+
+      if (res.status === 200) {
+        Cookies.set("_access_token", res.headers["access-token"]);
+        Cookies.set("_client", res.headers["client"]);
+        Cookies.set("_uid", res.headers["uid"]);
+
+        setIsSignedIn(true);
+        setCurrentUser(res.data.data);
+
+        history.push("/");
+        console.log("signed in successfully");
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  return (
+    <Box width="100%" height="100%" p="40px">
+      <Center
+        width="360px"
+        height="360px"
+        p="16px"
+        bg="white"
+        mx="auto"
+        borderRadius="md"
+        shadow="md"
+        textAlign="center"
+      >
+        <form>
+          <Stack spacing={4}>
+            <Heading as="h1" textAlign="center" mb="16px" fontSize="24px">
+              サインアップ
+            </Heading>
+            <Input
+              placeholder="email"
+              value={value.email}
+              onChange={(e) => handleChange(e)}
+              type="email"
+              name="email"
+            />
+            <Input
+              placeholder="password"
+              value={value.password}
+              onChange={(e) => handleChange(e)}
+              type="password"
+              name="password"
+            />
+            <Input
+              placeholder="passwordConfirmation"
+              value={value.passwordConfirmation}
+              onChange={(e) => handleChange(e)}
+              type="password"
+              name="passwordConfirmation"
+            />
+            <Button
+              bg="teal"
+              color="white"
+              type="submit"
+              onClick={(e) => handleSubmit(e)}
+            >
+              サインアップ
+            </Button>
+          </Stack>
+        </form>
+      </Center>
+    </Box>
+  );
+});
+```
+
+## サインインページ作成
+
+src/components/pages/auth/SignIn.tsx
+
+```
+import Cookies from "js-cookie";
+import React, { memo, useContext, useState, VFC } from "react";
+import { Box, Heading, Input, Center, Button, Stack } from "@chakra-ui/react";
+import { useHistory } from "react-router-dom";
+import { signIn } from "../../../api/auth";
+import { AuthContext } from "../../../App";
+
+export const SignIn: VFC = memo(() => {
+  const history = useHistory();
+
+  const { setIsSignedIn, setCurrentUser } = useContext<any>(AuthContext);
+
+  const [value, setValue] = useState({
+    id: 0,
+    email: "",
+    password: "",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue({
+      ...value,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    try {
+      const res = await signIn(value);
+
+      if (res.status === 200) {
+        Cookies.set("_access_token", res.headers["access-token"]);
+        Cookies.set("_client", res.headers["client"]);
+        Cookies.set("_uid", res.headers["uid"]);
+
+        setIsSignedIn(true);
+        setCurrentUser(res.data.data);
+
+        history.push("/");
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  return (
+    <Box width="100%" height="100%" p="40px">
+      <Center
+        width="360px"
+        height="360px"
+        p="16px"
+        bg="white"
+        mx="auto"
+        borderRadius="md"
+        shadow="md"
+        textAlign="center"
+      >
+        <form>
+          <Stack spacing={4}>
+            <Heading as="h1" textAlign="center" mb="16px" fontSize="24px">
+              サインイン
+            </Heading>
+            <Input
+              placeholder="email"
+              value={value.email}
+              onChange={(e) => handleChange(e)}
+              type="email"
+              name="email"
+            />
+            <Input
+              placeholder="password"
+              value={value.password}
+              onChange={(e) => handleChange(e)}
+              type="password"
+              name="password"
+            />
+            <Button
+              bg="teal"
+              color="white"
+              type="submit"
+              onClick={(e) => handleSubmit(e)}
+            >
+              サインイン
+            </Button>
+          </Stack>
+        </form>
+      </Center>
+    </Box>
+  );
+});
+```
+
+## ヘッダーにログアウトボタン配置
+
+src/components/layout/Header.tsx
+
+```
+import { Flex, Heading, Link, Box } from "@chakra-ui/react";
+import Cookies from "js-cookie";
+import { VFC, memo, useCallback, useContext } from "react";
+import { useHistory } from "react-router-dom";
+import { signOut } from "../../api/auth";
+import { AuthContext } from "../../App";
+
+export const Header: VFC = memo(() => {
+  const history = useHistory();
+
+  const onClickHome = useCallback(() => history.push("/"), [history]);
+  const onClickNewPost = useCallback(() => {
+    history.push("/new");
+  }, [history]);
+  const onClickSignUp = useCallback(() => {
+    history.push("/signup");
+  }, [history]);
+  const onClickSignIn = useCallback(() => {
+    history.push("/signin");
+  }, [history]);
+
+  // サインイン情報更新
+  const { setIsSignedIn } = useContext<any>(AuthContext);
+  // ログアウト関数
+  const handleSignOut = async () => {
+    try {
+      const res = await signOut();
+
+      // eslint-disable-next-line no-cond-assign
+      if ((res.data.success = true)) {
+        Cookies.remove("_access_token");
+        Cookies.remove("_client");
+        Cookies.remove("_uid");
+
+        setIsSignedIn(false);
+        history.push("/signin");
+        console.log("succeeded in sign out");
+      } else {
+        console.log("failed in sign out");
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // ログイン状態によってメニュー切り替え
+  const { loading, isSignedIn } = useContext<any>(AuthContext);
+
+  const AuthButtons = () => {
+    if (!loading) {
+      if (isSignedIn) {
+        return (
+          <Flex align="center" fontSize="sm">
+            <Box mr="24px">
+              <Link onClick={onClickNewPost}>新規投稿</Link>
+            </Box>
+            <Box mr="24px">
+              <Link>DM</Link>
+            </Box>
+            <Box mr="24px">
+              <Link>プロフィール</Link>
+            </Box>
+            <Box>
+              <Link onClick={handleSignOut}>ログアウト</Link>
+            </Box>
+          </Flex>
+        );
+      } else {
+        return (
+          <Flex align="center" fontSize="sm">
+            <Box mr="24px">
+              <Link onClick={onClickSignUp}>サインアップ</Link>
+            </Box>
+            <Box>
+              <Link onClick={onClickSignIn}>サインイン</Link>
+            </Box>
+          </Flex>
+        );
+      }
+    } else {
+      return <></>;
+    }
+  };
+  return (
+    <>
+      <Flex
+        as="nav"
+        bg="teal.500"
+        color="gray.50"
+        align="center"
+        justify="space-between"
+        padding={5}
+      >
+        <Flex
+          align="center"
+          as="a"
+          mr={8}
+          _hover={{ cursor: "pointer" }}
+          onClick={onClickHome}
+        >
+          <Heading as="h1" fontSize="lg">
+            SNS APP
+          </Heading>
+        </Flex>
+        <AuthButtons />
+      </Flex>
+    </>
+  );
+});
+```
+
+# User モデルと Post モデルを 1 対多で関連付け
+
+## posts テーブルに外部キーの user_id を追加する
+
+```
+$ cd api
+$ rails g migration AddUserIdToPosts
+```
+
+db/migrate/日付\_add_columns_to_posts.rb
+
+```
+class AddColumnsToPosts < ActiveRecord::Migration[6.1]
+  def change
+    add_reference :posts, :user, foreign_key: true, after: :content
+  end
+end
+```
+
+```
+$ rails db:migrate
+```
+
+db/schema.rb
+
+```
+create_table "posts", force: :cascade do |t|
+    t.text "content"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.integer "user_id"
+    t.index ["user_id"], name: "index_posts_on_user_id"
+end
 ```

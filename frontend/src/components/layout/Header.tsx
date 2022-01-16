@@ -1,6 +1,9 @@
 import { Flex, Heading, Link, Box } from "@chakra-ui/react";
-import { VFC, memo, useCallback } from "react";
+import Cookies from "js-cookie";
+import { VFC, memo, useCallback, useContext } from "react";
 import { useHistory } from "react-router-dom";
+import { signOut } from "../../api/auth";
+import { AuthContext } from "../../App";
 
 export const Header: VFC = memo(() => {
   const history = useHistory();
@@ -9,7 +12,75 @@ export const Header: VFC = memo(() => {
   const onClickNewPost = useCallback(() => {
     history.push("/new");
   }, [history]);
+  const onClickSignUp = useCallback(() => {
+    history.push("/signup");
+  }, [history]);
+  const onClickSignIn = useCallback(() => {
+    history.push("/signin");
+  }, [history]);
 
+  // サインイン情報更新
+  const { setIsSignedIn } = useContext<any>(AuthContext);
+  // ログアウト関数
+  const handleSignOut = async () => {
+    try {
+      const res = await signOut();
+
+      // eslint-disable-next-line no-cond-assign
+      if ((res.data.success = true)) {
+        Cookies.remove("_access_token");
+        Cookies.remove("_client");
+        Cookies.remove("_uid");
+
+        setIsSignedIn(false);
+        history.push("/signin");
+        console.log("succeeded in sign out");
+      } else {
+        console.log("failed in sign out");
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // ログイン状態によってメニュー切り替え
+  const { loading, isSignedIn } = useContext<any>(AuthContext);
+
+  const AuthButtons = () => {
+    if (!loading) {
+      if (isSignedIn) {
+        return (
+          <Flex align="center" fontSize="sm">
+            <Box mr="24px">
+              <Link onClick={onClickNewPost}>新規投稿</Link>
+            </Box>
+            <Box mr="24px">
+              <Link>DM</Link>
+            </Box>
+            <Box mr="24px">
+              <Link>プロフィール</Link>
+            </Box>
+            <Box>
+              <Link onClick={handleSignOut}>ログアウト</Link>
+            </Box>
+          </Flex>
+        );
+      } else {
+        return (
+          <Flex align="center" fontSize="sm">
+            <Box mr="24px">
+              <Link onClick={onClickSignUp}>サインアップ</Link>
+            </Box>
+            <Box>
+              <Link onClick={onClickSignIn}>サインイン</Link>
+            </Box>
+          </Flex>
+        );
+      }
+    } else {
+      return <></>;
+    }
+  };
   return (
     <>
       <Flex
@@ -31,14 +102,7 @@ export const Header: VFC = memo(() => {
             SNS APP
           </Heading>
         </Flex>
-        <Flex align="center" fontSize="sm">
-          <Box pr={4}>
-            <Link onClick={onClickNewPost}>新規投稿</Link>
-          </Box>
-          <Box>
-            <Link>プロフィール</Link>
-          </Box>
-        </Flex>
+        <AuthButtons />
       </Flex>
     </>
   );
