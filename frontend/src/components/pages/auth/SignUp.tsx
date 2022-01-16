@@ -11,6 +11,7 @@ export const SignUp: VFC = memo(() => {
 
   const [value, setValue] = useState({
     id: 0,
+    name: "",
     email: "",
     password: "",
     passwordConfirmation: "",
@@ -61,6 +62,13 @@ export const SignUp: VFC = memo(() => {
             <Heading as="h1" textAlign="center" mb="16px" fontSize="24px">
               サインアップ
             </Heading>
+            <Input
+              placeholder="name"
+              value={value.name}
+              onChange={(e) => handleChange(e)}
+              type="text"
+              name="name"
+            />
             <Input
               placeholder="email"
               value={value.email}

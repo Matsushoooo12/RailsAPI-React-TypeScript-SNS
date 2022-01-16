@@ -9,6 +9,7 @@ import { Detail } from "./components/pages/post/Detail";
 import { Edit } from "./components/pages/post/Edit";
 import { Home } from "./components/pages/post/Home";
 import { New } from "./components/pages/post/New";
+import { Profile } from "./components/pages/user/Profile";
 import { HeaderLayout } from "./components/templates/HeaderLayout";
 import theme from "./theme/theme";
 import { User } from "./types/user";
@@ -86,6 +87,9 @@ function App() {
                 </Route>
                 <Route path="/edit/:id">
                   <Edit />
+                </Route>
+                <Route path="/user/:id">
+                  <Profile />
                 </Route>
               </Private>
             </HeaderLayout>

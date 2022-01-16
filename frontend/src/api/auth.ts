@@ -9,7 +9,7 @@ export const signUp = (params: User) => {
 };
 
 // サインイン
-export const signIn = (params: Omit<User, "passwordConfirmation">) => {
+export const signIn = (params: Omit<User, "passwordConfirmation" | "name">) => {
   return client.post("/auth/sign_in", params);
 };
 
