@@ -62,6 +62,8 @@ app/config/puma.rb
 port ENV.fetch("PORT") { 3001 }
 ```
 
+# 投稿機能作成
+
 ## Post モデル作成
 
 ```
@@ -840,4 +842,176 @@ function App() {
 }
 
 export default App;
+```
+
+# ログイン機能
+
+## devise-token-auth を導入
+
+```
+gem 'devise'
+gem 'devise_token_auth'
+```
+
+```
+$ bundle install
+```
+
+```
+$ rails g devise:install
+$ rails g devise_token_auth:install User auth
+$ rails db:migrate
+```
+
+## devise-token-auth の設定
+
+```
+DeviseTokenAuth.setup do |config|
+  config.change_headers_on_each_request = false
+  config.token_lifespan = 2.weeks
+  config.token_cost = Rails.env.test? ? 4 : 10
+
+  config.headers_names = {:'access-token' => 'access-token',
+                         :'client' => 'client',
+                         :'expiry' => 'expiry',
+                         :'uid' => 'uid',
+                         :'token-type' => 'token-type' }
+end
+```
+
+## HTTP 通信設定の修正
+
+./config/initializers/cors.rb
+
+```
+Rails.application.config.middleware.insert_before 0, Rack::Cors do
+  allow do
+    origins "localhost:3000" # React側はポート番号3000で作るので「localhost:3000」を指定
+
+    resource "*",
+      headers: :any,
+      expose: ["access-token", "expiry", "token-type", "uid", "client"], # 追記
+      methods: [:get, :post, :put, :patch, :delete, :options, :head]
+  end
+end
+```
+
+## コントローラー作成
+
+```
+$ rails g controller api/v1/auth/registrations
+$ rails g controller api/v1/auth/sessions
+```
+
+./app/controllers/api/v1/auth/registrations_controller.rb
+
+```
+class Api::V1::Auth::RegistrationsController < DeviseTokenAuth::RegistrationsController
+    private
+    def sign_up_params
+        params.permit(:email, :password, :password_confirmation)
+    end
+end
+```
+
+./app/controllers/api/v1/auth/sessions_controller.rb
+
+```
+class Api::V1::Auth::SessionsController < ApplicationController
+    def index
+        if current_api_v1_user
+            render json: {is_login: true, data: current_api_v1_user }
+        else
+            render json: {is_login: false, message: "ユーザーが存在しません"}
+        end
+    end
+end
+```
+
+./app/controllers/application_controller.rb
+
+```
+class ApplicationController < ActionController::Base
+  include DeviseTokenAuth::Concerns::SetUserByToken
+
+  skip_before_action :verify_authenticity_token
+  helper_method :current_user, :user_signed_in?
+end
+```
+
+## ルーティング設定
+
+./app/config/routes.rb
+
+```
+Rails.application.routes.draw do
+  namespace :api do
+    namespace :v1 do
+      resources :posts
+      mount_devise_token_auth_for 'User', at: 'auth', controllers: {
+        registrations: 'api/v1/auth/registrations'
+      }
+
+      namespace :auth do
+        resources :sessions, only: %i[index]
+      end
+    end
+  end
+end
+```
+
+## 動作確認 →postman
+
+---
+
+**_サインアップ_**
+
+POST `http://localhost:3001/api/v1/auth`
+
+値
+
+```
+{
+    "email": "example@gmail.com",
+    "password": "password"
+}
+```
+
+<img width="1301" alt="スクリーンショット 2021-09-12 17 19 03" src="https://user-images.githubusercontent.com/66903388/132979343-b2872067-3795-4325-a0c5-2dc3314e92bf.png">
+
+ヘッダー情報には設定した'uid'、'access-token'、'client'情報が含まれています。
+
+<img width="1301" alt="スクリーンショット 2021-09-12 17 24 31" src="https://user-images.githubusercontent.com/66903388/132979483-bf2947d5-04ab-45e9-8ad8-2940718b61c7.png">
+
+**_サインイン_**
+
+POST `http://localhost:3001/api/v1/auth/sign_in`
+
+値
+
+```
+{
+    "email": "example@gmail.com",
+    "password": "password"
+}
+```
+
+<img width="1301" alt="スクリーンショット 2021-09-12 17 22 01" src="https://user-images.githubusercontent.com/66903388/132979409-2450359b-7e37-4906-8d5c-93828d6c97e5.png">
+
+こちらのヘッダー情報にも設定した'uid'、'access-token'、'client'情報が含まれています。
+
+<img width="1301" alt="スクリーンショット 2021-09-12 17 25 16" src="https://user-images.githubusercontent.com/66903388/132979499-66e94890-57df-470e-be75-a291d71c4203.png">
+
+**_サインアウト_**
+
+DELETE `http://localhost:3001/api/v1/auth/sign_out`
+
+サインアウト API に、サインイン情報に含まれた'uid'、'access-token'、'client'の ID を含めて送ることでサインアウトが完了します。
+
+```
+{
+    "uid": "shogo@example.com",
+    "access-token": "O6naQEOPRlt558FI9oEKXA",
+    "client": "ZstUQu3TGkXzCZ4JAsBAGw"
+}
 ```
