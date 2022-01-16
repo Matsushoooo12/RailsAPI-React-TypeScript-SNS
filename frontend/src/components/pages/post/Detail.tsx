@@ -56,11 +56,24 @@ export const Detail: VFC = memo(() => {
         mx="auto"
         borderRadius="md"
         shadow="md"
+        p="16px"
       >
-        <Stack>
+        <Stack width="100%">
           <Text textAlign="center">{value?.content}</Text>
-          <Button onClick={() => onClickEditPost(value?.id)}>編集</Button>
-          <Button onClick={() => handleDeletePost(value)}>削除</Button>
+          <Button
+            bg="teal"
+            color="white"
+            onClick={() => onClickEditPost(value?.id)}
+          >
+            編集
+          </Button>
+          <Button
+            bg="teal"
+            color="white"
+            onClick={() => handleDeletePost(value)}
+          >
+            削除
+          </Button>
         </Stack>
       </Center>
     </Box>

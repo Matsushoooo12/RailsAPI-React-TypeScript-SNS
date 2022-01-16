@@ -17,3 +17,10 @@
 - 全体の UI を設定
   theme.ts
 - ChakraProvider 設定
+- Header 作成
+- HeaderLayout 作成
+- post/Home ページ作成
+- ルーティング設定
+- post/Detail ページ作成
+- post/New ページ作成
+- post/Edit ページ作成
