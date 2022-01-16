@@ -1,11 +1,15 @@
 import { Box, Center, Text, Heading, Wrap, WrapItem } from "@chakra-ui/react";
-import { VFC, memo, useState, useEffect, useCallback } from "react";
+import { VFC, memo, useState, useEffect, useCallback, useContext } from "react";
 import { useHistory } from "react-router-dom";
+import { createLike, deleteLike } from "../../../api/like";
 import { getAllPosts } from "../../../api/post";
+import { AuthContext } from "../../../App";
 import { Post } from "../../../types/post";
 
 export const Home: VFC = memo(() => {
   const [posts, setPosts] = useState<Post[]>([]);
+
+  const { currentUser } = useContext<any>(AuthContext);
 
   const history = useHistory();
 
@@ -26,6 +30,28 @@ export const Home: VFC = memo(() => {
     }
   };
 
+  // いいね作成API
+  const handleCreateLike = async (item: Post) => {
+    try {
+      const res = await createLike(item.id);
+      console.log(res.data);
+      handleGetAllPosts();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // いいね削除API
+  const handleDeleteLike = async (item: Post) => {
+    try {
+      const res = await deleteLike(item.id);
+      console.log(res.data);
+      handleGetAllPosts();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
   useEffect(() => {
     handleGetAllPosts();
   }, []);
@@ -38,7 +64,6 @@ export const Home: VFC = memo(() => {
         {posts.map((post) => (
           <WrapItem key={post.id}>
             <Center
-              onClick={() => onClickDetailPost(post.id)}
               width="240px"
               height="240px"
               bg="white"
@@ -47,9 +72,23 @@ export const Home: VFC = memo(() => {
               cursor="pointer"
             >
               <Box textAlign="center">
-                <Text color="teal" fontWeight="bold" fontSize="24px">
+                <Text
+                  color="teal"
+                  fontWeight="bold"
+                  fontSize="24px"
+                  onClick={() => onClickDetailPost(post.id)}
+                >
                   {post.content}
                 </Text>
+                {post.likes?.find((like) => like.userId === currentUser.id) ? (
+                  <Text onClick={() => handleDeleteLike(post)}>
+                    ♡{post.likes?.length}
+                  </Text>
+                ) : (
+                  <Text onClick={() => handleCreateLike(post)}>
+                    ♡{post.likes?.length}
+                  </Text>
+                )}
                 <Text>{post.user.name}</Text>
                 <Text>{post.user.email}</Text>
               </Box>

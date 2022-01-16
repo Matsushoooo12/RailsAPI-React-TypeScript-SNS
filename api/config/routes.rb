@@ -2,7 +2,12 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       # 投稿
-      resources :posts
+      resources :posts do
+        member do
+            resources :likes, only: ["create"]
+        end
+      end
+      resources :likes, only: ["destroy"]
       # ユーザー
       resources :users
       # ログイン

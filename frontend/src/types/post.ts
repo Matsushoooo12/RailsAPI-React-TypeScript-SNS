@@ -1,3 +1,5 @@
+import { Like } from "./like";
+
 export type Post = {
   id: number;
   content: string;
@@ -6,4 +8,5 @@ export type Post = {
     name: string;
     email: string;
   };
+  likes: Like[];
 };

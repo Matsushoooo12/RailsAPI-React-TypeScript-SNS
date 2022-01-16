@@ -2802,3 +2802,450 @@ export const New: VFC = memo(() => {
 ```
 
 # いいね機能作成
+
+## Like モデル作成
+
+```
+$ cd api
+$ rails g model Like user:references post:references
+```
+
+db/migrate/日付\_create_like.rb
+
+```
+class CreateMessages < ActiveRecord::Migration[6.1]
+  def change
+    create_table :messages do |t|
+      t.references :user
+      t.references :post
+      t.timestamps
+    end
+  end
+end
+```
+
+```
+$ rails db:migrate
+```
+
+## Like アソシエーション追加
+
+model/user.rb
+
+```
+# 追加
+has_many :likes
+```
+
+model/post.rb
+
+```
+# 追加
+has_many :likes
+```
+
+model/like.rb
+
+```
+belongs_to :user
+belongs_to :post
+```
+
+## likes コントローラー作成
+
+```
+$ rails g controller api/v1/likes
+```
+
+controllers/api/v1/likes
+
+```
+class Api::V1::LikesController < ApplicationController
+    before_action :authenticate_api_v1_user!, only: ['create']
+
+    def create
+        like = Like.new(post_id: params[:id], user_id: current_api_v1_user.id)
+
+        if like.save
+            render json: like
+        else
+            render json: like.errors, status: 422
+        end
+    end
+
+    def destroy
+        like = Like.find_by(user_id: current_api_v1_user.id, post_id: params[:id])
+        if like.destroy
+            render json: like
+        else
+            render json: like.errors, status: 422
+        end
+    end
+end
+```
+
+## like ルーティング設定
+
+```
+# 追加
+resources :posts do
+    member do
+        resources :likes, only: ["create"]
+    end
+end
+resources :likes, only: ["destroy"]
+```
+
+ルーティング確認
+
+```
+$ rails routes | grep likes
+
+api_v1_likes POST   /api/v1/posts/:id/likes(.:format)    api/v1/likes#create
+api_v1_like DELETE  /api/v1/likes/:id(.:format)   api/v1/likes#destroy
+```
+
+## Postman でテスト
+
+サインイン情報に含まれる以下の情報を likes のエンドポイント API に入れる
+
+- access-token
+- client
+- uid
+
+いいね作成
+
+http://localhost:3001/api/v1/posts/1/likes
+
+ヘッダー情報にログイン情報で得た`access-token, client, uid`を入れて send ボタンを押す
+
+成功したら以下のような response が返ってくる
+
+```
+{
+    "id": 2,
+    "user_id": 3,
+    "post_id": 2,
+    "created_at": "2021-12-15T17:54:00.684Z",
+    "updated_at": "2021-12-15T17:54:00.684Z"
+}
+```
+
+いいね削除
+
+http://localhost:3001/api/v1/likes/1
+
+ヘッダー情報にログイン情報で得た`access-token, client, uid`を入れて send ボタンを押す
+
+成功したら以下のような response が返ってくる
+
+```
+{
+    "id": 1,
+    "user_id": 3,
+    "post_id": 1,
+    "created_at": "2021-12-15T18:22:09.657Z",
+    "updated_at": "2021-12-15T18:22:09.657Z"
+}
+```
+
+## API エンドポイント作成
+
+```
+$ cd frontend
+$ touch src/api/like.ts
+```
+
+src/api/like.ts
+
+```
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
+import Cookies from "js-cookie";
+import client from "./client";
+
+export const createLike = (id: number) => {
+  return client.post(
+    `/posts/${id}/likes`,
+    {},
+    {
+      headers: <any>{
+        "access-token": Cookies.get("_access_token"),
+        client: Cookies.get("_client"),
+        uid: Cookies.get("_uid"),
+      },
+    }
+  );
+};
+
+export const deleteLike = (id: number) => {
+  return client.delete(`/likes/${id}`, {
+    headers: <any>{
+      "access-token": Cookies.get("_access_token"),
+      client: Cookies.get("_client"),
+      uid: Cookies.get("_uid"),
+    },
+  });
+};
+```
+
+## Like の型付け
+
+```
+$ touch src/types/like.ts
+```
+
+src/types/like.ts
+
+```
+export type Like = {
+  id: number;
+  userId: number;
+  postId: number;
+};
+```
+
+## いいね機能の API 関数作成
+
+src/components/pages/post/Detail.tsx
+
+```
+import { Button, Box, Heading, Text, Center, Stack } from "@chakra-ui/react";
+import { memo, useContext, useEffect, useState, VFC } from "react";
+import { useHistory, useParams } from "react-router-dom";
+import { createLike, deleteLike } from "../../../api/like";
+import { deletePost, getDetailPost } from "../../../api/post";
+import { AuthContext } from "../../../App";
+import { Like } from "../../../types/like";
+import { Post } from "../../../types/post";
+
+export const Detail: VFC = memo(() => {
+  const { currentUser } = useContext<any>(AuthContext);
+  const [value, setValue] = useState({
+    id: 0,
+    content: "",
+    user: {
+      id: 0,
+      name: "",
+      email: "",
+    },
+  });
+
+  const [likes, setLikes] = useState<Like[]>();
+
+  const query = useParams();
+  const history = useHistory();
+
+  const onClickEditPost = (id: number) => {
+    history.push(`/edit/${id}`);
+  };
+
+  // 投稿詳細API
+  const handleGetDetailPost = async (query: any) => {
+    try {
+      const res = await getDetailPost(query.id);
+      console.log(res.data);
+      setValue({
+        id: res.data.id,
+        content: res.data.content,
+        user: {
+          id: res.data.user.id,
+          name: res.data.user.name,
+          email: res.data.user.email,
+        },
+      });
+      setLikes(res.data.likes);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // 投稿削除API
+  const handleDeletePost = async (item: Post) => {
+    console.log("click", item.id);
+    try {
+      const res = await deletePost(item.id);
+      console.log(res.data);
+      history.push("/");
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // いいね作成API
+  const handleCreateLike = async (item: Post) => {
+    try {
+      const res = await createLike(item.id);
+      console.log(res.data);
+      handleGetDetailPost(query);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // いいね削除API
+  const handleDeleteLike = async (item: Post) => {
+    try {
+      const res = await deleteLike(item.id);
+      console.log(res.data);
+      handleGetDetailPost(query);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  useEffect(() => {
+    handleGetDetailPost(query);
+  }, [query]);
+  return (
+    <Box width="100%" height="100%" p="40px">
+      <Heading as="h1" textAlign="center" mb={4}>
+        投稿詳細
+      </Heading>
+      <Center
+        width="240px"
+        height="240px"
+        bg="white"
+        mx="auto"
+        borderRadius="md"
+        shadow="md"
+        p="16px"
+      >
+        <Stack width="100%">
+          <Text textAlign="center">{value?.content}</Text>
+          {likes?.find((like) => like.userId === currentUser.id) ? (
+            <Text textAlign="center" onClick={() => handleDeleteLike(value)}>
+              ♡{likes?.length}
+            </Text>
+          ) : (
+            <Text textAlign="center" onClick={() => handleCreateLike(value)}>
+              ♡{likes?.length}
+            </Text>
+          )}
+          <Text textAlign="center">{value?.user.name}</Text>
+          <Text textAlign="center">{value?.user.email}</Text>
+          <Button
+            bg="teal"
+            color="white"
+            onClick={() => onClickEditPost(value?.id)}
+          >
+            編集
+          </Button>
+          <Button
+            bg="teal"
+            color="white"
+            onClick={() => handleDeletePost(value)}
+          >
+            削除
+          </Button>
+        </Stack>
+      </Center>
+    </Box>
+  );
+});
+```
+
+src/components/pages/post/Home.tsx
+
+```
+import { Box, Center, Text, Heading, Wrap, WrapItem } from "@chakra-ui/react";
+import { VFC, memo, useState, useEffect, useCallback, useContext } from "react";
+import { useHistory } from "react-router-dom";
+import { createLike, deleteLike } from "../../../api/like";
+import { getAllPosts } from "../../../api/post";
+import { AuthContext } from "../../../App";
+import { Post } from "../../../types/post";
+
+export const Home: VFC = memo(() => {
+  const [posts, setPosts] = useState<Post[]>([]);
+
+  const { currentUser } = useContext<any>(AuthContext);
+
+  const history = useHistory();
+
+  const onClickDetailPost = useCallback(
+    (id) => {
+      history.push(`/post/${id}`);
+    },
+    [history]
+  );
+
+  const handleGetAllPosts = async () => {
+    try {
+      const res = await getAllPosts();
+      console.log(res.data);
+      setPosts(res.data);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // いいね作成API
+  const handleCreateLike = async (item: Post) => {
+    try {
+      const res = await createLike(item.id);
+      console.log(res.data);
+      handleGetAllPosts();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // いいね削除API
+  const handleDeleteLike = async (item: Post) => {
+    try {
+      const res = await deleteLike(item.id);
+      console.log(res.data);
+      handleGetAllPosts();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  useEffect(() => {
+    handleGetAllPosts();
+  }, []);
+  return (
+    <Box p="40px">
+      <Heading as="h1" textAlign="center" mb="16px">
+        投稿一覧ページ
+      </Heading>
+      <Wrap>
+        {posts.map((post) => (
+          <WrapItem key={post.id}>
+            <Center
+              width="240px"
+              height="240px"
+              bg="white"
+              borderRadius="md"
+              shadow="md"
+              cursor="pointer"
+            >
+              <Box textAlign="center">
+                <Text
+                  color="teal"
+                  fontWeight="bold"
+                  fontSize="24px"
+                  onClick={() => onClickDetailPost(post.id)}
+                >
+                  {post.content}
+                </Text>
+                {post.likes?.find((like) => like.userId === currentUser.id) ? (
+                  <Text onClick={() => handleDeleteLike(post)}>
+                    ♡{post.likes?.length}
+                  </Text>
+                ) : (
+                  <Text onClick={() => handleCreateLike(post)}>
+                    ♡{post.likes?.length}
+                  </Text>
+                )}
+                <Text>{post.user.name}</Text>
+                <Text>{post.user.email}</Text>
+              </Box>
+            </Center>
+          </WrapItem>
+        ))}
+      </Wrap>
+    </Box>
+  );
+});
+```
