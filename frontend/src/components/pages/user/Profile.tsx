@@ -1,14 +1,16 @@
 import { useContext, useEffect, useState, VFC, memo } from "react";
 import { Box, Heading, Text, Center, Stack, Button } from "@chakra-ui/react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useHistory } from "react-router-dom";
 import { getDetailUser } from "../../../api/user";
 import { createFollow, deleteFollow } from "../../../api/follow";
 import { AuthContext } from "../../../App";
 import { Follow } from "../../../types/follow";
+import { createRoom } from "../../../api/dm";
 
 export const Profile: VFC = memo(() => {
   const { handleGetCurrentUser, currentUser } = useContext<any>(AuthContext);
 
+  const history = useHistory();
   const [user, setUser] = useState({
     id: 0,
     name: "",
@@ -49,6 +51,21 @@ export const Profile: VFC = memo(() => {
     try {
       await deleteFollow(id);
       handleGetCurrentUser();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // ルーム機能API
+  const handleCreateRoom = async (
+    e: React.MouseEvent<HTMLButtonElement>,
+    id: number
+  ) => {
+    e.preventDefault();
+    try {
+      const res = await createRoom(id);
+      console.log(res);
+      history.push(`/room/${res.data.id}`);
     } catch (e) {
       console.log(e);
     }
@@ -106,6 +123,14 @@ export const Profile: VFC = memo(() => {
                   フォローをする
                 </Button>
               )}
+              <Button
+                _hover={{ opacity: 0.8 }}
+                bg="teal"
+                color="white"
+                onClick={(e) => handleCreateRoom(e, user.id)}
+              >
+                DM
+              </Button>
             </>
           )}
           <p>

@@ -19,8 +19,12 @@ export const Header: VFC = memo(() => {
   const onClickSignIn = useCallback(() => {
     history.push("/signin");
   }, [history]);
-  const onClickProfile = () => {
+  const onClickProfile = useCallback(() => {
     history.push(`/user/${currentUser.id}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history]);
+  const onClickRooms = () => {
+    history.push("/rooms");
   };
 
   // サインイン情報更新
@@ -58,7 +62,7 @@ export const Header: VFC = memo(() => {
               <Link onClick={onClickNewPost}>新規投稿</Link>
             </Box>
             <Box mr="24px">
-              <Link>DM</Link>
+              <Link onClick={onClickRooms}>DM</Link>
             </Box>
             <Box mr="24px">
               <Link onClick={onClickProfile}>{currentUser.email}</Link>

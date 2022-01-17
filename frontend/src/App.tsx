@@ -4,6 +4,8 @@ import { BrowserRouter, Redirect, Route, Switch } from "react-router-dom";
 import { getCurrentUser } from "./api/auth";
 import { SignIn } from "./components/pages/auth/SignIn";
 import { SignUp } from "./components/pages/auth/SignUp";
+import { Room } from "./components/pages/dm/Room";
+import { Rooms } from "./components/pages/dm/Rooms";
 
 import { Detail } from "./components/pages/post/Detail";
 import { Edit } from "./components/pages/post/Edit";
@@ -84,6 +86,9 @@ function App() {
                 <Route exact path="/new">
                   <New />
                 </Route>
+                <Route exact path="/rooms">
+                  <Rooms />
+                </Route>
                 <Route path="/post/:id">
                   <Detail />
                 </Route>
@@ -98,6 +103,9 @@ function App() {
                 </Route>
                 <Route path="/following/:id">
                   <Friends showFollower={false} />
+                </Route>
+                <Route path="/room/:id">
+                  <Room />
                 </Route>
               </Private>
             </HeaderLayout>
