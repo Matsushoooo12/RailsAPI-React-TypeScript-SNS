@@ -8,7 +8,7 @@ class Api::V1::UsersController < ApplicationController
         user = User.find_by(id: params[:id])
         user_list = {
             id: user.id,
-            name: user.id,
+            name: user.name,
             email: user.email,
             followings: user.followings,
             followers: user.followers,

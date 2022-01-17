@@ -17,9 +17,6 @@ export const Profile: VFC = memo(() => {
     followers: [],
   });
 
-  //   const [followings, setFollowings] = useState<User[]>();
-  //   const [user, setUser] = useState<Pick<User, "id" | "name" | "email">>();
-
   const query = useParams();
 
   const handleGetDetailUser = async (query: any) => {
@@ -93,6 +90,7 @@ export const Profile: VFC = memo(() => {
                 (following: Follow) => user?.id === following.id
               ) ? (
                 <Button
+                  _hover={{ opacity: 0.8 }}
                   bg="teal"
                   color="white"
                   onClick={() => handleDeleteFollow(user?.id)}
@@ -101,6 +99,7 @@ export const Profile: VFC = memo(() => {
                 </Button>
               ) : (
                 <Button
+                  _hover={{ opacity: 0.8 }}
                   bg="teal"
                   color="white"
                   onClick={() => handleCreateFollow(user?.id)}

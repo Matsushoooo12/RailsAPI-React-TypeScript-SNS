@@ -93,8 +93,8 @@ export const Detail: VFC = memo(() => {
         投稿詳細
       </Heading>
       <Center
-        width="240px"
-        height="240px"
+        width="300px"
+        height="300px"
         bg="white"
         mx="auto"
         borderRadius="md"
@@ -102,7 +102,14 @@ export const Detail: VFC = memo(() => {
         p="16px"
       >
         <Stack width="100%">
-          <Text textAlign="center">{value?.content}</Text>
+          <Text
+            textAlign="center"
+            color="teal"
+            fontWeight="bold"
+            fontSize="24px"
+          >
+            {value?.content}
+          </Text>
           {likes?.find((like) => like.userId === currentUser.id) ? (
             <Text textAlign="center" onClick={() => handleDeleteLike(value)}>
               ♡{likes?.length}
