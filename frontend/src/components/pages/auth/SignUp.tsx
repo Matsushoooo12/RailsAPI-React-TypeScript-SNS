@@ -15,6 +15,8 @@ export const SignUp: VFC = memo(() => {
     email: "",
     password: "",
     passwordConfirmation: "",
+    followings: [],
+    followers: [],
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

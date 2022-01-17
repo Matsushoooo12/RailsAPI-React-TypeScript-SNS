@@ -20,6 +20,10 @@ export const Home: VFC = memo(() => {
     [history]
   );
 
+  const onClickProfile = (id: number) => {
+    history.push(`/user/${id}`);
+  };
+
   const handleGetAllPosts = async () => {
     try {
       const res = await getAllPosts();
@@ -89,8 +93,10 @@ export const Home: VFC = memo(() => {
                     ♡{post.likes?.length}
                   </Text>
                 )}
-                <Text>{post.user.name}</Text>
-                <Text>{post.user.email}</Text>
+                <Box onClick={() => onClickProfile(post.user.id)}>
+                  <Text>{post.user.name}</Text>
+                  <Text>{post.user.email}</Text>
+                </Box>
               </Box>
             </Center>
           </WrapItem>

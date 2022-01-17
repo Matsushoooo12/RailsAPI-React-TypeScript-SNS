@@ -6,7 +6,14 @@ class Api::V1::UsersController < ApplicationController
 
     def show
         user = User.find_by(id: params[:id])
-        render json: user
+        user_list = {
+            id: user.id,
+            name: user.id,
+            email: user.email,
+            followings: user.followings,
+            followers: user.followers,
+        }
+        render json: user_list
     end
 
     def update

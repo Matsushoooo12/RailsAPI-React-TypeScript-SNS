@@ -61,7 +61,7 @@ export const Header: VFC = memo(() => {
               <Link>DM</Link>
             </Box>
             <Box mr="24px">
-              <Link onClick={onClickProfile}>プロフィール</Link>
+              <Link onClick={onClickProfile}>{currentUser.email}</Link>
             </Box>
             <Box>
               <Link onClick={handleSignOut}>ログアウト</Link>

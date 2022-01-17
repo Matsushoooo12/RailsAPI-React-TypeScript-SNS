@@ -4,12 +4,17 @@ import { User } from "../types/user";
 import client from "./client";
 
 // サインアップ
-export const signUp = (params: User) => {
+export const signUp = (params: Omit<User, "followings" | "followers">) => {
   return client.post("/auth", params);
 };
 
 // サインイン
-export const signIn = (params: Omit<User, "passwordConfirmation" | "name">) => {
+export const signIn = (
+  params: Omit<
+    User,
+    "passwordConfirmation" | "name" | "followings" | "followers"
+  >
+) => {
   return client.post("/auth/sign_in", params);
 };
 

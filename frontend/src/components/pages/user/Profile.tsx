@@ -1,14 +1,24 @@
-import { useEffect, useState, VFC } from "react";
-import { Box, Heading, Text, Center, Stack } from "@chakra-ui/react";
+import { useContext, useEffect, useState, VFC, memo } from "react";
+import { Box, Heading, Text, Center, Stack, Button } from "@chakra-ui/react";
 import { useParams } from "react-router-dom";
 import { getDetailUser } from "../../../api/user";
+import { createFollow, deleteFollow } from "../../../api/follow";
+import { AuthContext } from "../../../App";
+import { Follow } from "../../../types/follow";
 
-export const Profile: VFC = () => {
+export const Profile: VFC = memo(() => {
+  const { handleGetCurrentUser, currentUser } = useContext<any>(AuthContext);
+
   const [user, setUser] = useState({
     id: 0,
     name: "",
     email: "",
+    followings: [],
+    followers: [],
   });
+
+  //   const [followings, setFollowings] = useState<User[]>();
+  //   const [user, setUser] = useState<Pick<User, "id" | "name" | "email">>();
 
   const query = useParams();
 
@@ -16,7 +26,33 @@ export const Profile: VFC = () => {
     try {
       const res = await getDetailUser(query.id);
       console.log(res.data);
-      setUser(res.data);
+      setUser({
+        id: res.data.id,
+        name: res.data.name,
+        email: res.data.email,
+        followings: res.data.followings,
+        followers: res.data.followers,
+      });
+      //   setFollowings(res.data.followings);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // フォロー機能API
+  const handleCreateFollow = async (id: number) => {
+    try {
+      await createFollow(id);
+      handleGetCurrentUser();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  const handleDeleteFollow = async (id: number) => {
+    try {
+      await deleteFollow(id);
+      handleGetCurrentUser();
     } catch (e) {
       console.log(e);
     }
@@ -49,8 +85,33 @@ export const Profile: VFC = () => {
             {user?.name}
           </Text>
           <Text textAlign="center">{user?.email}</Text>
+          {user?.id === currentUser.id ? (
+            <Text textAlign="center">現在のユーザーです</Text>
+          ) : (
+            <>
+              {currentUser.followings?.find(
+                (following: Follow) => user?.id === following.id
+              ) ? (
+                <Button
+                  bg="teal"
+                  color="white"
+                  onClick={() => handleDeleteFollow(user?.id)}
+                >
+                  フォローを外す
+                </Button>
+              ) : (
+                <Button
+                  bg="teal"
+                  color="white"
+                  onClick={() => handleCreateFollow(user?.id)}
+                >
+                  フォローをする
+                </Button>
+              )}
+            </>
+          )}
         </Stack>
       </Center>
     </Box>
   );
-};
+});

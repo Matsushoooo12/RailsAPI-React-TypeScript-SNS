@@ -3249,3 +3249,197 @@ export const Home: VFC = memo(() => {
   );
 });
 ```
+
+# フォロー機能作成
+
+## フォロー機能作成
+
+作成手順
+
+1. Relationship モデルを作る
+2. Relationship のマイグレーションファイルを編集&実行
+3. user モデルと Relationship モデルにアソシエーションを書く
+4. relationships コントローラで API を作成
+5. ルーティング設定
+6. フロントエンドで API 設定
+7. 表示実装
+
+### 1. Relationship モデルを作る
+
+user テーブル同士で「多対多」の関係を作ります。
+
+何故ならフォロワーもまた user だからです。イメージとしては user テーブル同士を relationships という中間テーブルでアソシエーションを組むイメージ
+
+```
+$ rails g model Relationship
+```
+
+### 2. Relationship のマイグレーションファイルを編集&実行
+
+db/migrate/年月日時\_create_relationships.rb
+
+```
+class CreateRelationships < ActiveRecord::Migration[5.0]
+  def change
+    create_table :relationships do |t|
+      t.references :user, foreign_key: true
+      t.references :follow, foreign_key: { to_table: :users }
+
+      t.timestamps
+
+      t.index [:user_id, :follow_id], unique: true
+    end
+  end
+end
+```
+
+```
+$ rails db:migrate
+```
+
+### 3. user モデルと Relationship モデルにアソシエーションを書く
+
+app/models/relationship.rb
+
+```
+class Relationship < ApplicationRecord
+  belongs_to :user
+  belongs_to :follow, class_name: 'User'
+
+  validates :user_id, presence: true
+  validates :follow_id, presence: true
+end
+```
+
+class_name: ‘User’ と補足設定することで、Follow クラスという存在しないクラスを参照することを防ぎ、User クラスであることを明示しています。
+
+app/models/user.rb
+
+```
+class User < ApplicationRecord
+  has_many :relationships
+  has_many :followings, through: :relationships, source: :follow
+  has_many :reverse_of_relationships, class_name: 'Relationship', foreign_key: 'follow_id'
+  has_many :followers, through: :reverse_of_relationships, source: :user
+end
+```
+
+- foregin_key = 入口
+- source = 出口
+- through: :relationships は「中間テーブルは relationships だよ」って設定してあげてるだけ
+- user.followings と打つだけで、user が中間テーブル relationships を取得し、その 1 つ 1 つの relationship の follow_id から、「フォローしている User 達」を取得
+
+### 4. relationships コントローラで API を作成
+
+```
+$ rails g controller api/v1/relationships
+```
+
+app/controllers/api/v1/relationships_controller.rb
+
+```
+class Api::V1::RelationshipsController < ApplicationController
+
+    def index
+        relationships = Relationship.all.order(created_at: :desc)
+        render json: relationships
+    end
+
+    def create
+        relationship = Relationship.new(follow_id: params[:id], user_id: current_api_v1_user.id)
+        if relationship.save
+            render json: relationship
+        else
+            render json: relationship.errors, status: 422
+        end
+    end
+
+    def destroy
+        relationship = Relationship.find_by(follow_id: params[:id], user_id: current_api_v1_user.id)
+        if relationship.destroy
+            render json: relationship
+        else
+            render json: relationship.errors, status: 422
+        end
+    end
+end
+
+```
+
+### 5. ルーティング設定
+
+config/routes.rb
+
+```
+# 追加
+resources :relationships, only: [:index, :destroy]
+# 編集＆追加
+resources :users do
+  member do
+    resources :relationships, only: [:create]
+  end
+end
+```
+
+## フォロー機能 API エンドポイント設定
+
+```
+$ cd frontend
+$ touch src/api/follow.ts
+```
+
+src/api/follow.ts
+
+```
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
+import Cookies from "js-cookie";
+import client from "./client";
+
+export const createFollow = (id: number) => {
+  return client.post(
+    `/users/${id}/relationships`,
+    {},
+    {
+      headers: <any>{
+        "access-token": Cookies.get("_access_token"),
+        client: Cookies.get("_client"),
+        uid: Cookies.get("_uid"),
+      },
+    }
+  );
+};
+
+export const deleteFollow = (id: number) => {
+  return client.delete(`/relationships/${id}`, {
+    headers: <any>{
+      "access-token": Cookies.get("_access_token"),
+      client: Cookies.get("_client"),
+      uid: Cookies.get("_uid"),
+    },
+  });
+};
+```
+
+## Follow の型付け
+
+```
+$ touch src/types/follow.ts
+```
+
+src/types/follow.ts
+
+```
+export type Follow = {
+  id: number;
+  userId: number;
+  followId: number;
+};
+```
+
+## Follow 機能の表示実装
+
+src/components/pages/user/Profile.tsx
+
+```
+
+```

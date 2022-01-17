@@ -9,7 +9,12 @@ Rails.application.routes.draw do
       end
       resources :likes, only: ["destroy"]
       # ユーザー
-      resources :users
+      resources :users do
+        member do
+          resources :relationships, only: [:create]
+        end
+      end
+      resources :relationships, only: [:index, :destroy]
       # ログイン
       mount_devise_token_auth_for 'User', at: 'auth', controllers: {
         registrations: 'api/v1/auth/registrations'
