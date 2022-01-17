@@ -4235,7 +4235,7 @@ $ touch src/types/dm.ts
 ```
 import { User } from "./user";
 
-export type Room = {
+export type DetailRoom = {
   id: number;
   currentUser: User;
   otherUser: User;
@@ -4305,4 +4305,628 @@ export const createMessage = (id: number, params: Message) => {
     },
   });
 };
+```
+
+## DM コンポーネント作成
+
+```
+$ mkdir src/components/pages/dm
+$ touch src/components/pages/dm/Room.tsx
+$ touch src/components/pages/dm/Rooms.tsx
+```
+
+src/components/pages/dm/Room.tsx
+
+```
+import React, { memo, useEffect, useRef, useState, VFC } from "react";
+import { Box, Heading, Text, Flex, Input, Button } from "@chakra-ui/react";
+import { Message } from "../../../types/dm";
+import { useParams } from "react-router-dom";
+import { createMessage, getDetailRoom } from "../../../api/dm";
+import { User } from "../../../types/user";
+
+export const Room: VFC = memo(() => {
+  const [otherUser, setOtherUser] = useState<User>();
+  const [messages, setMessages] = useState<Message[]>();
+  const [content, setContent] = useState<string>("");
+
+  // スクロール位置指定
+  const messageBox = useRef(null);
+
+  const query = useParams();
+
+  const handleGetDetailRoom = async (query: any) => {
+    try {
+      const res = await getDetailRoom(query.id);
+      console.log(res.data);
+      setOtherUser(res.data.otherUser);
+      setMessages(res.data.messages);
+      //   if (messageBox.current) {
+      //     messageBox.current.scrollTop = messageBox.current.scrollHeight + 16;
+      //   }
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  const handleSubmit = async (
+    query: any,
+    e: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    e.preventDefault();
+    try {
+      const res = await createMessage(query.id, { content: content });
+      console.log(res.data);
+      handleGetDetailRoom(query);
+    } catch (e) {
+      console.log(e);
+    }
+    setContent("");
+  };
+
+  useEffect(() => {
+    handleGetDetailRoom(query);
+  }, [query]);
+
+  return (
+    <Box width="100%" height="100%" p="40px">
+      <Heading as="h1" textAlign="center" mb={4}>
+        DM詳細
+      </Heading>
+      <Box
+        textAlign="center"
+        mx="auto"
+        width="500px"
+        height="100%"
+        p="16px"
+        bg="white"
+        mb="16px"
+        borderRadius="md"
+        shadow="md"
+      >
+        <Text color="teal" fontSize="24px" fontWeight="bold">
+          {otherUser?.name}
+        </Text>
+        <Text>{otherUser?.email}</Text>
+      </Box>
+      <Box
+        width="500px"
+        height="500px"
+        bg="white"
+        mx="auto"
+        borderRadius="md"
+        shadow="md"
+        overflow="scroll"
+        ref={messageBox}
+      >
+        {messages?.map((message) => (
+          <Box key={message.id} p="16px">
+            <Flex
+              justify={
+                message.userId === otherUser?.id ? "flex-start" : "flex-end"
+              }
+            >
+              <Text color={message.userId === otherUser?.id ? "teal" : "red"}>
+                {`${
+                  message.userId === otherUser?.id ? otherUser?.name : "自分"
+                }:${message.content}`}
+              </Text>
+            </Flex>
+          </Box>
+        ))}
+      </Box>
+      <Box width="500px" mx="auto" bg="teal" p="16px">
+        <form>
+          <Flex>
+            <Input
+              bg="white"
+              placeholder="content"
+              type="text"
+              name="content"
+              id="content"
+              color="gray.800"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+            />
+            <Button
+              type="submit"
+              bg="teal"
+              color="white"
+              onClick={(e) => handleSubmit(query, e)}
+            >
+              送信
+            </Button>
+          </Flex>
+        </form>
+      </Box>
+    </Box>
+  );
+});
+```
+
+touch src/components/pages/dm/Rooms.tsx
+
+```
+import { memo, useCallback, useEffect, useState, VFC } from "react";
+import { Box, Heading, Wrap, WrapItem, Center, Text } from "@chakra-ui/react";
+import { useHistory } from "react-router-dom";
+
+import { DetailRoom } from "../../../types/dm";
+import { getAllRooms } from "../../../api/dm";
+
+export const Rooms: VFC = memo(() => {
+  const [rooms, setRooms] = useState<DetailRoom[]>();
+  const history = useHistory();
+
+  const onClickDetailRoom = useCallback(
+    (id: number) => {
+      history.push(`/room/${id}`);
+    },
+    [history]
+  );
+
+  // ルーム一覧API
+  const handleGetAllRooms = async () => {
+    try {
+      const res = await getAllRooms();
+      setRooms(res.data);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // 最後のメッセージが新しいルーム順
+  rooms?.sort(function (a, b) {
+    if (a.lastMessage?.id > b.lastMessage?.id) return -1;
+    if (a.lastMessage?.id < b.lastMessage?.id) return 1;
+    return 0;
+  });
+
+  useEffect(() => {
+    handleGetAllRooms();
+  }, []);
+
+  return (
+    <Box width="100%" height="100%" p="40px">
+      <Heading as="h1" textAlign="center" mb={4}>
+        DM一覧
+      </Heading>
+      <Wrap>
+        {rooms?.map((room) => (
+          <WrapItem key={room.id}>
+            <Center
+              width="240px"
+              height="240px"
+              bg="white"
+              borderRadius="md"
+              shadow="md"
+              cursor="pointer"
+              p="16px"
+              onClick={() => onClickDetailRoom(room.id)}
+            >
+              <Box textAlign="center">
+                <Text color="teal" fontWeight="bold" fontSize="24px">
+                  {room.otherUser.name}
+                </Text>
+                <Text>
+                  {room.lastMessage === null
+                    ? "まだメッセージがありません"
+                    : room.lastMessage.content}
+                </Text>
+              </Box>
+            </Center>
+          </WrapItem>
+        ))}
+      </Wrap>
+    </Box>
+  );
+});
+```
+
+## DM リンク指定
+
+src/components/layout/Header.tsx
+
+```
+import { Flex, Heading, Link, Box } from "@chakra-ui/react";
+import Cookies from "js-cookie";
+import { VFC, memo, useCallback, useContext } from "react";
+import { useHistory } from "react-router-dom";
+import { signOut } from "../../api/auth";
+import { AuthContext } from "../../App";
+
+export const Header: VFC = memo(() => {
+  const history = useHistory();
+  const { loading, isSignedIn, currentUser } = useContext<any>(AuthContext);
+
+  const onClickHome = useCallback(() => history.push("/"), [history]);
+  const onClickNewPost = useCallback(() => {
+    history.push("/new");
+  }, [history]);
+  const onClickSignUp = useCallback(() => {
+    history.push("/signup");
+  }, [history]);
+  const onClickSignIn = useCallback(() => {
+    history.push("/signin");
+  }, [history]);
+  const onClickProfile = useCallback(() => {
+    history.push(`/user/${currentUser.id}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history]);
+  // 追加
+  const onClickRooms = () => {
+    history.push("/rooms");
+  };
+
+  // サインイン情報更新
+  const { setIsSignedIn } = useContext<any>(AuthContext);
+  // ログアウト関数
+  const handleSignOut = async () => {
+    try {
+      const res = await signOut();
+
+      // eslint-disable-next-line no-cond-assign
+      if ((res.data.success = true)) {
+        Cookies.remove("_access_token");
+        Cookies.remove("_client");
+        Cookies.remove("_uid");
+
+        setIsSignedIn(false);
+        history.push("/signin");
+        console.log("succeeded in sign out");
+      } else {
+        console.log("failed in sign out");
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // ログイン状態によってメニュー切り替え
+
+  const AuthButtons = () => {
+    if (!loading) {
+      if (isSignedIn) {
+        return (
+          <Flex align="center" fontSize="sm">
+            <Box mr="24px">
+              <Link onClick={onClickNewPost}>新規投稿</Link>
+            </Box>
+            <Box mr="24px">
+              // 修正
+              <Link onClick={onClickRooms}>DM</Link>
+            </Box>
+            <Box mr="24px">
+              <Link onClick={onClickProfile}>{currentUser.email}</Link>
+            </Box>
+            <Box>
+              <Link onClick={handleSignOut}>ログアウト</Link>
+            </Box>
+          </Flex>
+        );
+      } else {
+        return (
+          <Flex align="center" fontSize="sm">
+            <Box mr="24px">
+              <Link onClick={onClickSignUp}>サインアップ</Link>
+            </Box>
+            <Box>
+              <Link onClick={onClickSignIn}>サインイン</Link>
+            </Box>
+          </Flex>
+        );
+      }
+    } else {
+      return <></>;
+    }
+  };
+  return (
+    <>
+      <Flex
+        as="nav"
+        bg="teal.500"
+        color="gray.50"
+        align="center"
+        justify="space-between"
+        padding={5}
+      >
+        <Flex
+          align="center"
+          as="a"
+          mr={8}
+          _hover={{ cursor: "pointer" }}
+          onClick={onClickHome}
+        >
+          <Heading as="h1" fontSize="lg">
+            SNS APP
+          </Heading>
+        </Flex>
+        <AuthButtons />
+      </Flex>
+    </>
+  );
+});
+```
+
+## DM コンポーネント ルーティング指定
+
+src/App.tsx
+
+```
+import { ChakraProvider } from "@chakra-ui/react";
+import { createContext, useEffect, useState } from "react";
+import { BrowserRouter, Redirect, Route, Switch } from "react-router-dom";
+import { getCurrentUser } from "./api/auth";
+import { SignIn } from "./components/pages/auth/SignIn";
+import { SignUp } from "./components/pages/auth/SignUp";
+import { Room } from "./components/pages/dm/Room";
+import { Rooms } from "./components/pages/dm/Rooms";
+
+import { Detail } from "./components/pages/post/Detail";
+import { Edit } from "./components/pages/post/Edit";
+import { Home } from "./components/pages/post/Home";
+import { New } from "./components/pages/post/New";
+import { Friends } from "./components/pages/user/Friends";
+import { Profile } from "./components/pages/user/Profile";
+import { HeaderLayout } from "./components/templates/HeaderLayout";
+import theme from "./theme/theme";
+import { User } from "./types/user";
+
+export const AuthContext = createContext({});
+
+function App() {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isSignedIn, setIsSignedIn] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<User>();
+
+  const handleGetCurrentUser = async () => {
+    try {
+      const res = await getCurrentUser();
+
+      if (res?.data.isLogin === true) {
+        setIsSignedIn(true);
+        setCurrentUser(res?.data.data);
+        console.log(res.data.data);
+      } else {
+        console.log("no current user");
+      }
+    } catch (e) {
+      console.log(e);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    handleGetCurrentUser();
+  }, [setCurrentUser]);
+
+  const Private = ({ children }: any) => {
+    if (!loading) {
+      if (isSignedIn) {
+        return children;
+      } else {
+        return <Redirect to="/signin" />;
+      }
+    } else {
+      return <></>;
+    }
+  };
+
+  return (
+    <ChakraProvider theme={theme}>
+      <AuthContext.Provider
+        value={{
+          loading,
+          setLoading,
+          isSignedIn,
+          setIsSignedIn,
+          currentUser,
+          setCurrentUser,
+          handleGetCurrentUser,
+        }}
+      >
+        <BrowserRouter>
+          <Switch>
+            <HeaderLayout>
+              <Route exact path="/signup">
+                <SignUp />
+              </Route>
+              <Route exact path="/signin">
+                <SignIn />
+              </Route>
+              <Private>
+                <Route exact path="/">
+                  <Home />
+                </Route>
+                <Route exact path="/new">
+                  <New />
+                </Route>
+                // 追加
+                <Route exact path="/rooms">
+                  <Rooms />
+                </Route>
+                <Route path="/post/:id">
+                  <Detail />
+                </Route>
+                <Route path="/edit/:id">
+                  <Edit />
+                </Route>
+                <Route path="/user/:id">
+                  <Profile />
+                </Route>
+                <Route path="/follower/:id">
+                  <Friends showFollower={true} />
+                </Route>
+                <Route path="/following/:id">
+                  <Friends showFollower={false} />
+                </Route>
+                // 追加
+                <Route path="/room/:id">
+                  <Room />
+                </Route>
+              </Private>
+            </HeaderLayout>
+          </Switch>
+        </BrowserRouter>
+      </AuthContext.Provider>
+    </ChakraProvider>
+  );
+}
+
+export default App;
+```
+
+src/components/components/pages/user/Profile.tsx
+
+```
+import { useContext, useEffect, useState, VFC, memo } from "react";
+import { Box, Heading, Text, Center, Stack, Button } from "@chakra-ui/react";
+import { useParams, Link, useHistory } from "react-router-dom";
+import { getDetailUser } from "../../../api/user";
+import { createFollow, deleteFollow } from "../../../api/follow";
+import { AuthContext } from "../../../App";
+import { Follow } from "../../../types/follow";
+import { createRoom } from "../../../api/dm";
+
+export const Profile: VFC = memo(() => {
+  const { handleGetCurrentUser, currentUser } = useContext<any>(AuthContext);
+
+  const history = useHistory();
+  const [user, setUser] = useState({
+    id: 0,
+    name: "",
+    email: "",
+    followings: [],
+    followers: [],
+  });
+
+  const query = useParams();
+
+  const handleGetDetailUser = async (query: any) => {
+    try {
+      const res = await getDetailUser(query.id);
+      console.log(res.data);
+      setUser({
+        id: res.data.id,
+        name: res.data.name,
+        email: res.data.email,
+        followings: res.data.followings,
+        followers: res.data.followers,
+      });
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // フォロー機能API
+  const handleCreateFollow = async (id: number) => {
+    try {
+      await createFollow(id);
+      handleGetCurrentUser();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  const handleDeleteFollow = async (id: number) => {
+    try {
+      await deleteFollow(id);
+      handleGetCurrentUser();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // 追加
+  // ルーム機能API
+  const handleCreateRoom = async (
+    e: React.MouseEvent<HTMLButtonElement>,
+    id: number
+  ) => {
+    e.preventDefault();
+    try {
+      const res = await createRoom(id);
+      console.log(res);
+      history.push(`/room/${res.data.id}`);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  useEffect(() => {
+    handleGetDetailUser(query);
+  }, [query]);
+  return (
+    <Box width="100%" height="100%" p="40px">
+      <Heading as="h1" textAlign="center" mb={4}>
+        プロフィール
+      </Heading>
+      <Center
+        width="240px"
+        height="240px"
+        bg="white"
+        mx="auto"
+        borderRadius="md"
+        shadow="md"
+        p="16px"
+      >
+        <Stack width="100%">
+          <Text
+            textAlign="center"
+            color="teal"
+            fontWeight="bold"
+            fontSize="24px"
+          >
+            {user?.name}
+          </Text>
+          <Text textAlign="center">{user?.email}</Text>
+          {user?.id === currentUser.id ? (
+            <Text textAlign="center">現在のユーザーです</Text>
+          ) : (
+            <>
+              {currentUser.followings?.find(
+                (following: Follow) => user?.id === following.id
+              ) ? (
+                <Button
+                  _hover={{ opacity: 0.8 }}
+                  bg="teal"
+                  color="white"
+                  onClick={() => handleDeleteFollow(user?.id)}
+                >
+                  フォローを外す
+                </Button>
+              ) : (
+                <Button
+                  _hover={{ opacity: 0.8 }}
+                  bg="teal"
+                  color="white"
+                  onClick={() => handleCreateFollow(user?.id)}
+                >
+                  フォローをする
+                </Button>
+              )}
+              // 追加
+              <Button
+                _hover={{ opacity: 0.8 }}
+                bg="teal"
+                color="white"
+                onClick={(e) => handleCreateRoom(e, user.id)}
+              >
+                DM
+              </Button>
+            </>
+          )}
+          <p>
+            <Link to={`/following/${user.id}`}>
+              フォロー数{user.followings?.length}
+            </Link>
+            <Link to={`/follower/${user.id}`}>
+              フォロワー数{user.followers?.length}
+            </Link>
+          </p>
+        </Stack>
+      </Center>
+    </Box>
+  );
+});
 ```
