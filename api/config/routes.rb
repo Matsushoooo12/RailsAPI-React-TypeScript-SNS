@@ -12,8 +12,16 @@ Rails.application.routes.draw do
       resources :users do
         member do
           resources :relationships, only: [:create]
+          resources :rooms, only: %i[create]
         end
       end
+      # DM機能
+      resources :rooms, only: %i[show index] do
+        member do
+            resources :messages, only: %i[create]
+        end
+      end
+      # フォロー機能
       resources :relationships, only: [:index, :destroy]
       # ログイン
       mount_devise_token_auth_for 'User', at: 'auth', controllers: {

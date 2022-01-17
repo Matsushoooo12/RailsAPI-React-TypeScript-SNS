@@ -4005,3 +4005,222 @@ function App() {
 
 export default App;
 ```
+
+# DM 機能
+
+## Room モデル作成
+
+```
+$ cd api
+$ rails g model Room
+```
+
+db/migrate/日付\_create_rooms.rb
+
+```
+class CreateRooms < ActiveRecord::Migration[6.1]
+  def change
+    create_table :rooms do |t|
+
+      t.timestamps
+    end
+  end
+end
+```
+
+```
+$ rails db:migrate
+```
+
+## Entry モデル作成
+
+```
+$ rails g model Entry user:references room:references
+```
+
+db/migrate/日付\_create_entries.rb
+
+```
+class CreateEntries < ActiveRecord::Migration[6.1]
+  def change
+    create_table :entries do |t|
+      t.references :user, null: false, foreign_key: true
+      t.references :room, null: false, foreign_key: true
+
+      t.timestamps
+    end
+  end
+end
+```
+
+```
+$ rails db:migrate
+```
+
+## Message モデル作成
+
+```
+$ rails g model Message user:references room:references content:text
+```
+
+db/migrate/日付\_create_messages.rb
+
+```
+class CreateMessages < ActiveRecord::Migration[6.1]
+  def change
+    create_table :messages do |t|
+      t.references :user, null: false, foreign_key: true
+      t.references :room, null: false, foreign_key: true
+      t.text :content
+
+      t.timestamps
+    end
+  end
+end
+```
+
+```
+$ rails db:migrate
+```
+
+## アソシエーション設定
+
+models/room.rb
+
+```
+class Room < ApplicationRecord
+    has_many :messages, dependent: :destroy
+    has_many :entries, dependent: :destroy
+    has_many :users, through: :entries
+end
+```
+
+models/user.rb
+
+```
+# 追加
+has_many :messages, dependent: :destroy
+has_many :entries, dependent: :destroy
+has_many :rooms, through: :entries
+```
+
+models/entry.rb
+
+```
+class Entry < ApplicationRecord
+  belongs_to :user
+  belongs_to :room
+end
+```
+
+models/message.rb
+
+```
+belongs_to :user
+belongs_to :room
+```
+
+## コントローラー作成
+
+```
+$ touch app/controllers/api/v1/rooms
+$ touch app/controllers/api/v1/messages
+```
+
+api/v1/rooms_controller.rb
+
+```
+class Api::V1::RoomsController < ApplicationController
+    before_action :authenticate_api_v1_user!
+
+    def index
+        rooms = current_api_v1_user.rooms.order(created_at: :desc)
+        rooms_array = rooms.map do |room|
+            {
+                id: room.id,
+                current_user: room.users.where(id: current_api_v1_user.id)[0],
+                other_user: room.users.where.not(id: current_api_v1_user.id)[0],
+                last_message: room.messages[-1]
+            }
+        end
+        render json: rooms_array
+    end
+
+    def create
+        isRoom = false
+        my_entry = Entry.where(user_id: current_api_v1_user.id)
+        other_entry = Entry.where(user_id: params[:id])
+        my_entry.each do |me|
+            other_entry.each do |oe|
+                if me.room_id == oe.room_id
+                    isRoom = true
+                end
+            end
+        end
+        if isRoom
+            my_entry = Entry.where(user_id: current_api_v1_user.id)
+            other_entry = Entry.where(user_id: params[:id])
+            my_entry.each do |me|
+                other_entry.each do |oe|
+                    if me.room_id == oe.room_id
+                        room = Room.find_by(id: me.room_id)
+                        render json: room
+                    end
+                end
+            end
+        else
+            room = Room.create
+            Entry.create(room_id: room.id, user_id: current_api_v1_user.id)
+            Entry.create(room_id: room.id, user_id: params[:id])
+            room = Room.find_by(id: room.id)
+            render json: room
+        end
+    end
+
+    def show
+        room = Room.find_by(id: params[:id])
+        other_user = room.users.where.not(id: current_api_v1_user.id)[0]
+        messages = room.messages.order(created_at: :asc)
+
+        render json: { other_user: other_user, messages: messages }
+    end
+end
+```
+
+api/v1/messages_controller.rb
+
+```
+class Api::V1::MessagesController < ApplicationController
+    before_action :authenticate_api_v1_user!
+
+    def create
+        message = Message.new(user_id: current_api_v1_user.id, room_id: params[:id], content: params[:content])
+
+        if message.save
+            render json: message
+        else
+            render json: message.errors, status: 422
+        end
+    end
+end
+```
+
+## ルーティング設定
+
+config/routes.rb
+
+```
+# 修正
+resources :users do
+    member do
+        resources :relationships, only: [:create]
+        resources :rooms, only: %i[create]
+    end
+end
+# DM機能
+resources :rooms, only: %i[show index] do
+    member do
+        resources :messages, only: %i[create]
+    end
+end
+```
