@@ -11,7 +11,7 @@ export const Room: VFC = memo(() => {
   const [content, setContent] = useState<string>("");
 
   // スクロール位置指定
-  const messageBox = useRef(null);
+  const messageBox = useRef<HTMLDivElement>(null);
 
   const query = useParams();
 
@@ -21,9 +21,9 @@ export const Room: VFC = memo(() => {
       console.log(res.data);
       setOtherUser(res.data.otherUser);
       setMessages(res.data.messages);
-      //   if (messageBox.current) {
-      //     messageBox.current.scrollTop = messageBox.current.scrollHeight + 16;
-      //   }
+      if (messageBox.current) {
+        messageBox.current.scrollTop = messageBox.current.scrollHeight + 16;
+      }
     } catch (e) {
       console.log(e);
     }

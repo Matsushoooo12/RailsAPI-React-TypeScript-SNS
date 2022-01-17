@@ -4447,77 +4447,127 @@ export const Room: VFC = memo(() => {
 touch src/components/pages/dm/Rooms.tsx
 
 ```
-import { memo, useCallback, useEffect, useState, VFC } from "react";
-import { Box, Heading, Wrap, WrapItem, Center, Text } from "@chakra-ui/react";
-import { useHistory } from "react-router-dom";
+import React, { memo, useEffect, useRef, useState, VFC } from "react";
+import { Box, Heading, Text, Flex, Input, Button } from "@chakra-ui/react";
+import { Message } from "../../../types/dm";
+import { useParams } from "react-router-dom";
+import { createMessage, getDetailRoom } from "../../../api/dm";
+import { User } from "../../../types/user";
 
-import { DetailRoom } from "../../../types/dm";
-import { getAllRooms } from "../../../api/dm";
+export const Room: VFC = memo(() => {
+  const [otherUser, setOtherUser] = useState<User>();
+  const [messages, setMessages] = useState<Message[]>();
+  const [content, setContent] = useState<string>("");
 
-export const Rooms: VFC = memo(() => {
-  const [rooms, setRooms] = useState<DetailRoom[]>();
-  const history = useHistory();
+  // スクロール位置指定
+  const messageBox = useRef<HTMLDivElement>(null);
 
-  const onClickDetailRoom = useCallback(
-    (id: number) => {
-      history.push(`/room/${id}`);
-    },
-    [history]
-  );
+  const query = useParams();
 
-  // ルーム一覧API
-  const handleGetAllRooms = async () => {
+  const handleGetDetailRoom = async (query: any) => {
     try {
-      const res = await getAllRooms();
-      setRooms(res.data);
+      const res = await getDetailRoom(query.id);
+      console.log(res.data);
+      setOtherUser(res.data.otherUser);
+      setMessages(res.data.messages);
+      if (messageBox.current) {
+        messageBox.current.scrollTop = messageBox.current.scrollHeight + 16;
+      }
     } catch (e) {
       console.log(e);
     }
   };
 
-  // 最後のメッセージが新しいルーム順
-  rooms?.sort(function (a, b) {
-    if (a.lastMessage?.id > b.lastMessage?.id) return -1;
-    if (a.lastMessage?.id < b.lastMessage?.id) return 1;
-    return 0;
-  });
+  const handleSubmit = async (
+    query: any,
+    e: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    e.preventDefault();
+    try {
+      const res = await createMessage(query.id, { content: content });
+      console.log(res.data);
+      handleGetDetailRoom(query);
+    } catch (e) {
+      console.log(e);
+    }
+    setContent("");
+  };
 
   useEffect(() => {
-    handleGetAllRooms();
-  }, []);
+    handleGetDetailRoom(query);
+  }, [query]);
 
   return (
     <Box width="100%" height="100%" p="40px">
       <Heading as="h1" textAlign="center" mb={4}>
-        DM一覧
+        DM詳細
       </Heading>
-      <Wrap>
-        {rooms?.map((room) => (
-          <WrapItem key={room.id}>
-            <Center
-              width="240px"
-              height="240px"
-              bg="white"
-              borderRadius="md"
-              shadow="md"
-              cursor="pointer"
-              p="16px"
-              onClick={() => onClickDetailRoom(room.id)}
+      <Box
+        textAlign="center"
+        mx="auto"
+        width="500px"
+        height="100%"
+        p="16px"
+        bg="white"
+        mb="16px"
+        borderRadius="md"
+        shadow="md"
+      >
+        <Text color="teal" fontSize="24px" fontWeight="bold">
+          {otherUser?.name}
+        </Text>
+        <Text>{otherUser?.email}</Text>
+      </Box>
+      <Box
+        width="500px"
+        height="500px"
+        bg="white"
+        mx="auto"
+        borderRadius="md"
+        shadow="md"
+        overflow="scroll"
+        ref={messageBox}
+      >
+        {messages?.map((message) => (
+          <Box key={message.id} p="16px">
+            <Flex
+              justify={
+                message.userId === otherUser?.id ? "flex-start" : "flex-end"
+              }
             >
-              <Box textAlign="center">
-                <Text color="teal" fontWeight="bold" fontSize="24px">
-                  {room.otherUser.name}
-                </Text>
-                <Text>
-                  {room.lastMessage === null
-                    ? "まだメッセージがありません"
-                    : room.lastMessage.content}
-                </Text>
-              </Box>
-            </Center>
-          </WrapItem>
+              <Text color={message.userId === otherUser?.id ? "teal" : "red"}>
+                {`${
+                  message.userId === otherUser?.id ? otherUser?.name : "自分"
+                }:${message.content}`}
+              </Text>
+            </Flex>
+          </Box>
         ))}
-      </Wrap>
+      </Box>
+      <Box width="500px" mx="auto" bg="teal" p="16px">
+        <form>
+          <Flex>
+            <Input
+              bg="white"
+              placeholder="content"
+              type="text"
+              name="content"
+              id="content"
+              color="gray.800"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+            />
+            <Button
+              type="submit"
+              bg="teal"
+              color="white"
+              onClick={(e) => handleSubmit(query, e)}
+            >
+              送信
+            </Button>
+          </Flex>
+        </form>
+      </Box>
     </Box>
   );
 });
