@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState, VFC, memo } from "react";
 import { Box, Heading, Text, Center, Stack, Button } from "@chakra-ui/react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { getDetailUser } from "../../../api/user";
 import { createFollow, deleteFollow } from "../../../api/follow";
 import { AuthContext } from "../../../App";
@@ -108,6 +108,14 @@ export const Profile: VFC = memo(() => {
               )}
             </>
           )}
+          <p>
+            <Link to={`/following/${user.id}`}>
+              フォロー数{user.followings?.length}
+            </Link>
+            <Link to={`/follower/${user.id}`}>
+              フォロワー数{user.followers?.length}
+            </Link>
+          </p>
         </Stack>
       </Center>
     </Box>
