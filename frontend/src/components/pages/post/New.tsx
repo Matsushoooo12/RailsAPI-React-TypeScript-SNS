@@ -29,6 +29,9 @@ export const New: VFC = memo(() => {
   };
   return (
     <Box width="100%" height="100%" p="40px">
+      <Heading as="h1" textAlign="center" mb={4}>
+        新規投稿
+      </Heading>
       <Center
         width="240px"
         height="240px"
@@ -41,9 +44,6 @@ export const New: VFC = memo(() => {
       >
         <form>
           <Stack spacing={4}>
-            <Heading as="h1" textAlign="center" mb="16px" fontSize="24px">
-              新規作成
-            </Heading>
             <Input
               placeholder="content"
               value={value.content}

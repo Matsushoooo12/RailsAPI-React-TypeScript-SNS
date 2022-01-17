@@ -9,6 +9,7 @@ import { Detail } from "./components/pages/post/Detail";
 import { Edit } from "./components/pages/post/Edit";
 import { Home } from "./components/pages/post/Home";
 import { New } from "./components/pages/post/New";
+import { Friends } from "./components/pages/user/Friends";
 import { Profile } from "./components/pages/user/Profile";
 import { HeaderLayout } from "./components/templates/HeaderLayout";
 import theme from "./theme/theme";
@@ -91,6 +92,12 @@ function App() {
                 </Route>
                 <Route path="/user/:id">
                   <Profile />
+                </Route>
+                <Route path="/follower/:id">
+                  <Friends showFollower={true} />
+                </Route>
+                <Route path="/following/:id">
+                  <Friends showFollower={false} />
                 </Route>
               </Private>
             </HeaderLayout>

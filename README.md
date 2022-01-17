@@ -3363,7 +3363,45 @@ class Api::V1::RelationshipsController < ApplicationController
         end
     end
 end
+```
 
+## ユーザー情報のコントローラーを修正
+
+app/controllers/api/v1/users_controller.rb
+
+```
+# 修正
+def show
+    user = User.find_by(id: params[:id])
+    user_list = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        followings: user.followings,
+        followers: user.followers,
+    }
+    render json: user_list
+end
+```
+
+app/controllers/api/v1/auth/sessisions_controller.rb
+
+```
+# 修正
+def index
+    current_user = {
+        id: current_api_v1_user.id,
+        name: current_api_v1_user.name,
+        email: current_api_v1_user.email,
+        followings: current_api_v1_user.followings,
+        followers: current_api_v1_user.followers,
+    }
+    if current_api_v1_user
+        render json: {is_login: true, data: current_user }
+    else
+        render json: {is_login: false, message: "ユーザーが存在しません"}
+    end
+end
 ```
 
 ### 5. ルーティング設定
@@ -3431,8 +3469,25 @@ src/types/follow.ts
 ```
 export type Follow = {
   id: number;
-  userId: number;
-  followId: number;
+  name: string;
+  email: string;
+};
+```
+
+src/types/user.ts
+
+```
+import { Follow } from "./follow";
+
+export type User = {
+  id: number;
+  name: string;
+  email: string;
+  password: string;
+  passwordConfirmation: string;
+  // 追加
+  followings: Follow[];
+  followers: Follow[];
 };
 ```
 
@@ -3441,5 +3496,127 @@ export type Follow = {
 src/components/pages/user/Profile.tsx
 
 ```
+import { useContext, useEffect, useState, VFC, memo } from "react";
+import { Box, Heading, Text, Center, Stack, Button } from "@chakra-ui/react";
+import { useParams } from "react-router-dom";
+import { getDetailUser } from "../../../api/user";
+import { createFollow, deleteFollow } from "../../../api/follow";
+import { AuthContext } from "../../../App";
+import { Follow } from "../../../types/follow";
 
+export const Profile: VFC = memo(() => {
+  // 追加
+  const { handleGetCurrentUser, currentUser } = useContext<any>(AuthContext);
+
+  const [user, setUser] = useState({
+    id: 0,
+    name: "",
+    email: "",
+    // 追加
+    followings: [],
+    followers: [],
+  });
+
+  const query = useParams();
+
+  const handleGetDetailUser = async (query: any) => {
+    try {
+      const res = await getDetailUser(query.id);
+      console.log(res.data);
+      setUser({
+        id: res.data.id,
+        name: res.data.name,
+        email: res.data.email,
+        // 追加
+        followings: res.data.followings,
+        followers: res.data.followers,
+      });
+      //   setFollowings(res.data.followings);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // 追加
+  // フォロー機能API
+  const handleCreateFollow = async (id: number) => {
+    try {
+      await createFollow(id);
+      handleGetCurrentUser();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  const handleDeleteFollow = async (id: number) => {
+    try {
+      await deleteFollow(id);
+      handleGetCurrentUser();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  useEffect(() => {
+    handleGetDetailUser(query);
+  }, [query]);
+  return (
+    <Box width="100%" height="100%" p="40px">
+      <Heading as="h1" textAlign="center" mb={4}>
+        プロフィール
+      </Heading>
+      <Center
+        width="240px"
+        height="240px"
+        bg="white"
+        mx="auto"
+        borderRadius="md"
+        shadow="md"
+        p="16px"
+      >
+        <Stack width="100%">
+          <Text
+            textAlign="center"
+            color="teal"
+            fontWeight="bold"
+            fontSize="24px"
+          >
+            {user?.name}
+          </Text>
+          <Text textAlign="center">{user?.email}</Text>
+          // 追加
+          {user?.id === currentUser.id ? (
+            <Text textAlign="center">現在のユーザーです</Text>
+          ) : (
+            <>
+              {currentUser.followings?.find(
+                (following: Follow) => user?.id === following.id
+              ) ? (
+                <Button
+                  _hover={{ opacity: 0.8 }}
+                  bg="teal"
+                  color="white"
+                  onClick={() => handleDeleteFollow(user?.id)}
+                >
+                  フォローを外す
+                </Button>
+              ) : (
+                <Button
+                  _hover={{ opacity: 0.8 }}
+                  bg="teal"
+                  color="white"
+                  onClick={() => handleCreateFollow(user?.id)}
+                >
+                  フォローをする
+                </Button>
+              )}
+            </>
+          )}
+        </Stack>
+      </Center>
+    </Box>
+  );
+});
 ```
+
+## フォロー・フォロワー一覧ページ作成

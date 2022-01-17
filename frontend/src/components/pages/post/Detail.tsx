@@ -111,11 +111,19 @@ export const Detail: VFC = memo(() => {
             {value?.content}
           </Text>
           {likes?.find((like) => like.userId === currentUser.id) ? (
-            <Text textAlign="center" onClick={() => handleDeleteLike(value)}>
+            <Text
+              cursor="pointer"
+              textAlign="center"
+              onClick={() => handleDeleteLike(value)}
+            >
               ♡{likes?.length}
             </Text>
           ) : (
-            <Text textAlign="center" onClick={() => handleCreateLike(value)}>
+            <Text
+              cursor="pointer"
+              textAlign="center"
+              onClick={() => handleCreateLike(value)}
+            >
               ♡{likes?.length}
             </Text>
           )}
@@ -124,6 +132,7 @@ export const Detail: VFC = memo(() => {
           <Button
             bg="teal"
             color="white"
+            _hover={{ opacity: 0.8 }}
             onClick={() => onClickEditPost(value?.id)}
           >
             編集
@@ -131,6 +140,7 @@ export const Detail: VFC = memo(() => {
           <Button
             bg="teal"
             color="white"
+            _hover={{ opacity: 0.8 }}
             onClick={() => handleDeletePost(value)}
           >
             削除

@@ -30,7 +30,6 @@ export const Profile: VFC = memo(() => {
         followings: res.data.followings,
         followers: res.data.followers,
       });
-      //   setFollowings(res.data.followings);
     } catch (e) {
       console.log(e);
     }
