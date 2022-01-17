@@ -20,9 +20,8 @@ export const Header: VFC = memo(() => {
     history.push("/signin");
   }, [history]);
   const onClickProfile = useCallback(() => {
-    history.push(`/user/${currentUser.id}`);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [history]);
+    history.push(`/user/${currentUser?.id}`);
+  }, [history, currentUser]);
   const onClickRooms = () => {
     history.push("/rooms");
   };
