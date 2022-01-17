@@ -45,8 +45,8 @@ export const SignIn: VFC = memo(() => {
   return (
     <Box width="100%" height="100%" p="40px">
       <Center
-        width="360px"
-        height="360px"
+        width="400px"
+        height="400px"
         p="16px"
         bg="white"
         mx="auto"
