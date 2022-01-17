@@ -1,16 +1,9 @@
 import React, { memo, useEffect, useRef, useState, VFC } from "react";
 import { Box, Heading, Text, Flex, Input, Button } from "@chakra-ui/react";
-import { DetailRoom, Message } from "../../../types/dm";
+import { Message } from "../../../types/dm";
 import { useParams } from "react-router-dom";
 import { createMessage, getDetailRoom } from "../../../api/dm";
 import { User } from "../../../types/user";
-
-const SCROLL_DATA = Array.from({ length: 100 }, (x, i) => {
-  return {
-    id: i,
-    title: `item ${i}`,
-  };
-});
 
 export const Room: VFC = memo(() => {
   const [otherUser, setOtherUser] = useState<User>();
