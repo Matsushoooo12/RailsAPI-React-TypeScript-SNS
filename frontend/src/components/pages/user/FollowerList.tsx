@@ -12,7 +12,7 @@ import {
 import { Follow } from "../../../types/follow";
 import { AuthContext } from "../../../App";
 import { User } from "../../../types/user";
-import { useParams } from "react-router-dom";
+import { useParams, useHistory } from "react-router-dom";
 import { getDetailUser } from "../../../api/user";
 import { createFollow, deleteFollow } from "../../../api/follow";
 
@@ -21,6 +21,11 @@ export const FollowerList: VFC = memo(() => {
   const [followers, setFollowers] = useState<Follow[]>();
   const [user, setUser] = useState<User>();
   const query = useParams();
+  const history = useHistory();
+
+  const onClickDetailUser = (id: number) => {
+    history.push(`/user/${id}`);
+  };
 
   const handleGetFollowers = async (query: any) => {
     try {
@@ -77,6 +82,7 @@ export const FollowerList: VFC = memo(() => {
                   color="teal"
                   fontWeight="bold"
                   fontSize="24px"
+                  onClick={() => onClickDetailUser(follower.id)}
                 >
                   {follower?.name}
                 </Text>

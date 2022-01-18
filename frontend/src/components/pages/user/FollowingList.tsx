@@ -11,7 +11,7 @@ import {
 } from "@chakra-ui/react";
 import { AuthContext } from "../../../App";
 import { Follow } from "../../../types/follow";
-import { useParams } from "react-router-dom";
+import { useHistory, useParams } from "react-router-dom";
 import { getDetailUser } from "../../../api/user";
 import { User } from "../../../types/user";
 import { deleteFollow } from "../../../api/follow";
@@ -21,6 +21,11 @@ export const FollowingList: VFC = memo(() => {
   const [followings, setFollowings] = useState<Follow[]>([]);
   const [user, setUser] = useState<User>();
   const query = useParams();
+  const history = useHistory();
+
+  const onClickDetailUser = (id: number) => {
+    history.push(`/user/${id}`);
+  };
 
   const handleGetFollowings = async (query: any) => {
     try {
@@ -67,6 +72,7 @@ export const FollowingList: VFC = memo(() => {
                   color="teal"
                   fontWeight="bold"
                   fontSize="24px"
+                  onClick={() => onClickDetailUser(following.id)}
                 >
                   {following?.name}
                 </Text>

@@ -4980,3 +4980,239 @@ export const Profile: VFC = memo(() => {
   );
 });
 ```
+
+## フォロー一覧のユーザー詳細遷移リンクを配置
+
+src/components/pages/user/FollowerList.tsx
+
+```
+import { VFC, memo, useState, useContext, useEffect } from "react";
+import {
+  Text,
+  Box,
+  Stack,
+  Wrap,
+  WrapItem,
+  Center,
+  Button,
+  Heading,
+} from "@chakra-ui/react";
+import { Follow } from "../../../types/follow";
+import { AuthContext } from "../../../App";
+import { User } from "../../../types/user";
+import { useParams, useHistory } from "react-router-dom";
+import { getDetailUser } from "../../../api/user";
+import { createFollow, deleteFollow } from "../../../api/follow";
+
+export const FollowerList: VFC = memo(() => {
+  const { currentUser, handleGetCurrentUser } = useContext<any>(AuthContext);
+  const [followers, setFollowers] = useState<Follow[]>();
+  const [user, setUser] = useState<User>();
+  const query = useParams();
+  // 追加
+  const history = useHistory();
+  // 追加
+  const onClickDetailUser = (id: number) => {
+    history.push(`/user/${id}`);
+  };
+
+  const handleGetFollowers = async (query: any) => {
+    try {
+      const res = await getDetailUser(query.id);
+      setFollowers(res.data.followers);
+      setUser(res.data);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  // フォロー機能関数
+  const handleCreateFollow = async (item: any) => {
+    try {
+      await createFollow(item.id);
+      handleGetCurrentUser();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  const handleDeleteFollow = async (item: any) => {
+    try {
+      await deleteFollow(item.id);
+      handleGetCurrentUser();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  useEffect(() => {
+    handleGetFollowers(query);
+  }, [query]);
+  return (
+    <Box width="100%" height="100%" p="40px">
+      <Heading as="h1" textAlign="center" mb={4}>
+        フォロワー
+      </Heading>
+      <Wrap>
+        {followers?.map((follower) => (
+          <WrapItem key={follower.id}>
+            <Center
+              width="240px"
+              height="240px"
+              bg="white"
+              borderRadius="md"
+              shadow="md"
+              cursor="pointer"
+              p="16px"
+              // 追加
+              onClick={() => onClickDetailUser(follower.id)}
+            >
+              <Stack width="100%">
+                <Text
+                  textAlign="center"
+                  color="teal"
+                  fontWeight="bold"
+                  fontSize="24px"
+                >
+                  {follower?.name}
+                </Text>
+                <Text textAlign="center">{follower?.email}</Text>
+                {currentUser.id === user?.id && (
+                  <>
+                    {currentUser.followings?.find(
+                      (follow: any) => follow.id === follower.id
+                    ) ? (
+                      <Button
+                        bg="teal"
+                        color="white"
+                        _hover={{ opacity: 0.8 }}
+                        onClick={() => handleDeleteFollow(follower)}
+                      >
+                        フォローを外す
+                      </Button>
+                    ) : (
+                      <Button
+                        bg="teal"
+                        color="white"
+                        _hover={{ opacity: 0.8 }}
+                        onClick={() => handleCreateFollow(follower)}
+                      >
+                        フォローをする
+                      </Button>
+                    )}
+                  </>
+                )}
+              </Stack>
+            </Center>
+          </WrapItem>
+        ))}
+      </Wrap>
+    </Box>
+  );
+});
+
+```
+
+src/components/pages/user/FollowingList.tsx
+
+```
+import { VFC, memo, useContext, useState, useEffect } from "react";
+import {
+  Text,
+  Box,
+  Stack,
+  Wrap,
+  WrapItem,
+  Center,
+  Button,
+  Heading,
+} from "@chakra-ui/react";
+import { AuthContext } from "../../../App";
+import { Follow } from "../../../types/follow";
+import { useHistory, useParams } from "react-router-dom";
+import { getDetailUser } from "../../../api/user";
+import { User } from "../../../types/user";
+import { deleteFollow } from "../../../api/follow";
+
+export const FollowingList: VFC = memo(() => {
+  const { currentUser, handleGetCurrentUser } = useContext<any>(AuthContext);
+  const [followings, setFollowings] = useState<Follow[]>([]);
+  const [user, setUser] = useState<User>();
+  const query = useParams();
+  // 追加
+  const history = useHistory();
+  // 追加
+  const onClickDetailUser = (id: number) => {
+    history.push(`/user/${id}`);
+  };
+
+  const handleGetFollowings = async (query: any) => {
+    try {
+      const res = await getDetailUser(query.id);
+      setFollowings(res.data.followings);
+      setUser(res.data);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  const handleDeleteFollow = async (item: any) => {
+    try {
+      await deleteFollow(item.id);
+      handleGetCurrentUser();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  useEffect(() => {
+    handleGetFollowings(query);
+  }, [query]);
+  return (
+    <Box width="100%" height="100%" p="40px">
+      <Heading as="h1" textAlign="center" mb={4}>
+        フォロー中
+      </Heading>
+      <Wrap>
+        {followings?.map((following) => (
+          <WrapItem key={following.id}>
+            <Center
+              width="240px"
+              height="240px"
+              bg="white"
+              borderRadius="md"
+              shadow="md"
+              cursor="pointer"
+              p="16px"
+              // 追加
+              onClick={() => onClickDetailUser(following.id)}
+            >
+              <Stack width="100%">
+                <Text
+                  textAlign="center"
+                  color="teal"
+                  fontWeight="bold"
+                  fontSize="24px"
+                >
+                  {following?.name}
+                </Text>
+                <Text textAlign="center">{following?.email}</Text>
+                {currentUser.id === user?.id && (
+                  <Button
+                    bg="teal"
+                    color="white"
+                    _hover={{ opacity: 0.8 }}
+                    onClick={() => handleDeleteFollow(following)}
+                  >
+                    フォローを外す
+                  </Button>
+                )}
+              </Stack>
+            </Center>
+          </WrapItem>
+        ))}
+      </Wrap>
+    </Box>
+  );
+});
+```
