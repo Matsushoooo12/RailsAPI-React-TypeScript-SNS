@@ -1,4 +1,4 @@
-import { VFC, memo, useState, useContext, useEffect } from "react";
+import { VFC, memo, useState, useContext, useEffect, useCallback } from "react";
 import {
   Text,
   Box,
@@ -23,9 +23,12 @@ export const FollowerList: VFC = memo(() => {
   const query = useParams();
   const history = useHistory();
 
-  const onClickDetailUser = (id: number) => {
-    history.push(`/user/${id}`);
-  };
+  const onClickDetailUser = useCallback(
+    (id: number) => {
+      history.push(`/user/${id}`);
+    },
+    [history]
+  );
 
   const handleGetFollowers = async (query: any) => {
     try {

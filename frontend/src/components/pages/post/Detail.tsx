@@ -1,5 +1,5 @@
 import { Button, Box, Heading, Text, Center, Stack } from "@chakra-ui/react";
-import { memo, useContext, useEffect, useState, VFC } from "react";
+import { memo, useCallback, useContext, useEffect, useState, VFC } from "react";
 import { useHistory, useParams } from "react-router-dom";
 import { createLike, deleteLike } from "../../../api/like";
 import { deletePost, getDetailPost } from "../../../api/post";
@@ -25,9 +25,12 @@ export const Detail: VFC = memo(() => {
   const query = useParams();
   const history = useHistory();
 
-  const onClickEditPost = (id: number) => {
-    history.push(`/edit/${id}`);
-  };
+  const onClickEditPost = useCallback(
+    (id: number) => {
+      history.push(`/edit/${id}`);
+    },
+    [history]
+  );
 
   // 投稿詳細API
   const handleGetDetailPost = async (query: any) => {
