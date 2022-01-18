@@ -129,22 +129,26 @@ export const Detail: VFC = memo(() => {
           )}
           <Text textAlign="center">{value?.user.name}</Text>
           <Text textAlign="center">{value?.user.email}</Text>
-          <Button
-            bg="teal"
-            color="white"
-            _hover={{ opacity: 0.8 }}
-            onClick={() => onClickEditPost(value?.id)}
-          >
-            編集
-          </Button>
-          <Button
-            bg="teal"
-            color="white"
-            _hover={{ opacity: 0.8 }}
-            onClick={() => handleDeletePost(value)}
-          >
-            削除
-          </Button>
+          {currentUser.id === value?.user.id && (
+            <>
+              <Button
+                bg="teal"
+                color="white"
+                _hover={{ opacity: 0.8 }}
+                onClick={() => onClickEditPost(value?.id)}
+              >
+                編集
+              </Button>
+              <Button
+                bg="teal"
+                color="white"
+                _hover={{ opacity: 0.8 }}
+                onClick={() => handleDeletePost(value)}
+              >
+                削除
+              </Button>
+            </>
+          )}
         </Stack>
       </Center>
     </Box>
