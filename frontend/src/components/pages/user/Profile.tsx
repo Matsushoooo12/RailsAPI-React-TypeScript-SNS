@@ -1,5 +1,13 @@
 import { useContext, useEffect, useState, VFC, memo } from "react";
-import { Box, Heading, Text, Center, Stack, Button } from "@chakra-ui/react";
+import {
+  Box,
+  Heading,
+  Text,
+  Center,
+  Stack,
+  Button,
+  Divider,
+} from "@chakra-ui/react";
 import { useParams, Link, useHistory } from "react-router-dom";
 import { getDetailUser } from "../../../api/user";
 import { createFollow, deleteFollow } from "../../../api/follow";
@@ -143,6 +151,7 @@ export const Profile: VFC = memo(() => {
           </p>
         </Stack>
       </Center>
+      <Divider my="16px" />
     </Box>
   );
 });

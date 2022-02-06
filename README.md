@@ -1,5 +1,9 @@
 # Rails API + React(TypeScript)で簡易的な SNS アプリ を作る
 
+## ER 図
+
+<img width="832" alt="スクリーンショット 2022-02-06 17 44 28" src="https://user-images.githubusercontent.com/66903388/152673692-cd0dad31-8531-4bab-93dc-96aaf38e0a1f.png">
+
 ## 作業用ディレクトリ作成
 
 ```

@@ -1,11 +1,13 @@
-import { memo, useCallback, useEffect, useState, VFC } from "react";
+import { memo, useCallback, useContext, useEffect, useState, VFC } from "react";
 import { Box, Heading, Wrap, WrapItem, Center, Text } from "@chakra-ui/react";
 import { useHistory } from "react-router-dom";
 
 import { DetailRoom } from "../../../types/dm";
 import { getAllRooms } from "../../../api/dm";
+import { AuthContext } from "../../../App";
 
 export const Rooms: VFC = memo(() => {
+  const { currentUser } = useContext<any>(AuthContext);
   const [rooms, setRooms] = useState<DetailRoom[]>();
   const history = useHistory();
 
@@ -62,7 +64,11 @@ export const Rooms: VFC = memo(() => {
                 <Text>
                   {room.lastMessage === null
                     ? "まだメッセージがありません"
-                    : room.lastMessage.content}
+                    : `${
+                        room.lastMessage.userId === currentUser.id
+                          ? `自分：${room.lastMessage.content}`
+                          : `${room.otherUser.name}：${room.lastMessage.content}`
+                      }`}
                 </Text>
               </Box>
             </Center>
