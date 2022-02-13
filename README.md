@@ -6,7 +6,7 @@ https://zenn.dev/shogo_matsumoto/articles/971a1f9e50bd67
 
 ## ER 図
 
-<img width="832" alt="スクリーンショット 2022-02-06 17 44 28" src="https://user-images.githubusercontent.com/66903388/152673692-cd0dad31-8531-4bab-93dc-96aaf38e0a1f.png">
+<img width="836" alt="スクリーンショット 2022-02-13 15 06 56" src="https://user-images.githubusercontent.com/66903388/153749316-c7cb7aa1-60e4-4e23-86e7-3a3562db9af7.png">
 
 ## 作業用ディレクトリ作成
 
